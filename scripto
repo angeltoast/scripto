@@ -1,0 +1,151 @@
+#!/bin/bash
+
+# Scripto - an aid for working inside a single, large script
+# 1) Scan the script for all functions, and save to a file;
+# 2) User chooses a function from the file, and Scripto scans the 
+#    script for all instances of that function (with line numbers);
+# 3) User can then select an instance and open the script at that line
+#    using chosen text editor.
+# Written by Elizabeth Mills
+
+#
+# Functions
+#
+listgen1() {
+  local Backtitle="$Passed"
+  local Title="$2"
+  if [ $3 ]; then
+    case $3 in
+      "nocancel") CancelButton="--nocancel"
+      ;;
+      *) CancelButton="--cancel-label $3"
+    esac
+  else
+    CancelButton=""
+  fi
+  local Counter=0
+  declare -a Options
+  if [ ! $Width ]; then
+    Width=40
+  fi
+  # Prepare $1 for dialog menu
+  for item in $1 # Prepare string array of list items passed as $1
+  do
+    Counter=$((Counter+1))
+    Options[${Counter}]="$item"
+    Counter=$((Counter+1))
+    Options[${Counter}]="-"
+    Length=`echo ${#item}`
+    if [ $Length -gt $Width ]; then
+      Width=$((Length+20))
+    fi
+  done
+  Printit
+}
+
+listgen2() { 
+  local Backtitle="$Passed"
+  local Title="$2"
+  if [ $3 ]; then
+    case $3 in
+      "nocancel") CancelButton="--nocancel"
+      ;;
+      *) CancelButton="--cancel-label $3"
+    esac
+  else
+    CancelButton=""
+  fi
+  declare -a Options
+  local Counter=0
+  for item in $1; do
+    Items[${Counter}]=$item
+    Counter=$((Counter+1))
+  done
+  Counter=0
+  local ItemCounter=0
+  # Import the complex array
+  name=$4[@]
+  LongName=("${!name}")
+  if [ ! $Width ]; then
+    Width=50
+  fi
+  # Prepare $1 and $4 for dialog menu
+  for item in "${LongName[@]}"; do
+    Options[$((Counter))]="${Items[${ItemCounter}]}"
+    Options[$((Counter+1))]="$item"
+    Counter=$((Counter+2))
+    ItemCounter=$((ItemCounter+1))
+    Length=`echo ${#item}`
+    if [ $Length -gt $Width ]; then
+      Width=$((Length+30))
+    fi
+  done
+  Printit # The final frontier
+}
+
+Printit() {
+  Counter=$((Counter/2))
+  # Calculate number of lines
+  echo $Message > output.file
+  countcharacters=`cat output.file | wc -c`  # Count number of characters in $Message
+  countlines=$((countcharacters/Width)) # Calculate lines
+  echo $Message | sed 's/[^\\]//g' > output.file   # Use sed to remove all except newlines
+  countnewlines=`cat output.file | wc -c` # Count newline characters
+  Height=$((countlines+countnewlines+Counter+16-Counter))
+  if [ $Height -gt 19 ]; then
+    Height=19
+    if [ $Width -lt 50 ]; then
+      Width=$((Width+10))
+    fi
+  fi
+  # Use $Counter and ${Options[@]} array in dialog
+  dialog --backtitle "$Backtitle" --title " $Title " --no-shadow --ok-button "Select" $CancelButton \
+      --menu "$Message\n" $Height $Width $Counter "${Options[@]}" 2> output.file
+}
+
+# Select file (script) to open
+FileName="$1"
+if [ $2 ]; then
+  Editor="$2"
+else
+  Editor="nano"
+fi
+
+# List all functions in selected script to a file
+AllFunctions=`cat $FileName | grep '()' | awk '{print $1}'`
+
+x=0
+while [ $x ]
+do
+  # Display a list of functions for user to select from
+  listgen1 "$AllFunctions"
+  if [ $? -gt 0 ]; then # <Cancel> selected
+    exit
+  fi
+  Function=$(cat output.file) # Save name of selected function
+  # Strip trailing brackets
+  Function=`echo $Function | sed s/"()"//g`
+
+  # Display a list of all instances of that function
+  LineNumbers=`cat -n $FileName | grep $Function | awk '{print $1}'`
+  AllInstances=`cat -n $FileName | grep $Function | awk '{print $2}'`
+  # Convert $AllInstances to an array
+  Counter=0
+  for i in $AllInstances
+  do
+    InstancesArray[${Counter}]=$i
+    Counter=$((Counter+1))
+  done
+  z=0
+  while [ $z ]
+  do
+    listgen2 "$LineNumbers" "" "" "InstancesArray"
+    if [ $? -gt 0 ]; then # <Cancel> selected
+      break
+    else
+      Instance=$(cat output.file) # Save line number of selected function
+      # Open the file at the selected instance's line number in chosen editor
+      $Editor "+$Instance" "$FileName"
+    fi
+  done
+done
