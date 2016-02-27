@@ -302,16 +302,16 @@ SettingsEdit() { # Form screen to edit settings
    "Editor") Message="Enter your preferred editor (only Geany, Nano and Gedit support the line-finding facility)"
         Title="Editor"
      ;;
-    *) echo "Code hole at $LINENO" # > null
+    *) echo "Code hole at $LINENO" 
   esac
   dialog --backtitle "$BackTitle" --title " - $Title - " --inputbox "\n$Message\n" 16 51 2> output.file
   RetVal=$?
   case $RetVal in
   0) NewTag=`cat output.file`
-      if [ $Item = "Delimi" ]; then
-        sed -i "s/$Delimiter/$NewTag" .scriptosettings
+      if [ $Item = "Delimiter" ]; then
+        sed -i "s/${Delimiter}/${NewTag}/" .scriptosettings
       elif [ $Item = "Editor" ]; then
-        sed -i "s/$Editor/$NewTag/" .scriptosettings
+        sed -i "s/${Editor}/${NewTag}/" .scriptosettings
       fi
     ;;
   *) Exit="Yes" # <Cancel> or [Esc]
