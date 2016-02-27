@@ -14,6 +14,8 @@
 # Listgen functions for display of lists
 #
 
+BackTitle="Scripto - a programmers' utility"
+
 Printit() { # Display the chosen list
   Counter=$((Counter/2))
   # Calculate number of lines
@@ -30,16 +32,17 @@ Printit() { # Display the chosen list
     fi
   fi
   # Use $Counter and ${Options[@]} array in dialog
-  dialog --backtitle "$Backtitle" --title " $Title " --no-shadow --ok-button "Select" $Buttons \
+  dialog --backtitle "$BackTitle" --title " $Title " --no-shadow --ok-button "Select" $Buttons \
       --menu "$Message\n" $Height $Width $Counter "${Options[@]}" 2> output.file
 }
 
 listgen1() { # Produce a one-dimensional list
-  local Backtitle="$Passed"
   local Title="$2"
   if [ $3 ]; then
     case $3 in
       "nocancel") Buttons="--nocancel"
+      ;;
+      "Back" | "Quit" | "Done") Buttons="--cancel-label $3"
       ;;
       *) Buttons="--extra-button --extra-label $3"
     esac
@@ -67,11 +70,12 @@ listgen1() { # Produce a one-dimensional list
 }
 
 listgen2() { # Produce a two-dimensional list
-  local Backtitle="$Passed"
   local Title="$2"
   if [ $3 ]; then
     case $3 in
       "nocancel") Buttons="--nocancel"
+      ;;
+      "Back" | "Quit" | "Done") Buttons="--cancel-label $3"
       ;;
       *) Buttons="--extra-button --extra-label $3"
     esac
@@ -113,7 +117,7 @@ MainMenu() {
   Exit="No"
   while [ $Exit = "No" ]
   do
-    dialog --backtitle "$Backtitle" --title " - Main Menu - " --no-shadow --ok-button "Select" \
+    dialog --backtitle "$BackTitle" --title " - Main Menu - " --no-shadow --ok-button "Select" \
     --cancel-label "Exit" --menu " " 10 55 2 \
       "Files" "Choose the file you want to work on" \
       "Settings" "Change the delimiter or editor" 2> output.file
@@ -156,7 +160,7 @@ ChooseWorkingFile() { # User selects a script in the present working directory
       PassList="$PassList $Count"
     done
     Message="\nAll files in the current working directory\n\n"
-    listgen2 "$PassList" "Files" "" "ItemsArray"
+    listgen2 "$PassList" "Files" "Back" "ItemsArray"
     RetVal=$?
     case $RetVal in
     0) FileName=${ItemsArray[`cat output.file`]}
@@ -186,7 +190,7 @@ DisplaySelection() { # List all items matching '$Delimiter' in selected script
     Length=$((Length-2))
     FullLine=`cat temp.file | grep "${Item}"` # Get matching long record
     echo "${FullLine}" | cut -c $((Length+5))- > working.file # Trim off first field
-    LongList[${Count}]=`cat working.file` # This is 4th argument of listgen2
+    LongList[${Count}]=`cat working.file | sed -e 's/^[ \t]*//'` # This is 4th argument of listgen2
     Count=$((Count+1))
   done
   rm len.file
@@ -197,7 +201,7 @@ DisplaySelection() { # List all items matching '$Delimiter' in selected script
   do
     local Message="\nAll functions in '$FileName'\n\n"
     # Display a list of functions for user to select from
-    listgen2 "$ShortList" "Functions" "" "LongList"
+    listgen2 "$ShortList" "Functions" "Back" "LongList"
     RetVal=$?
     case $RetVal in
     0) Selected
@@ -219,7 +223,7 @@ Selected() { # Displays the selected function and all calls
   InstancesArray=() # Then read them into an array
   for line in $LineNumbers
   do
-    InstancesArray[${Counter}]=`sed -n "$Counter p" AllInstances | sed -e 's/^[ \t]*//'`
+    InstancesArray[${Counter}]=`sed -n "$Counter p" AllInstances | sed -e 's/^[ \t]*//'` # Remove leading blanks
     Counter=$((Counter+1))
   done
   rm AllInstances
@@ -227,7 +231,7 @@ Selected() { # Displays the selected function and all calls
   z=0
   while [ $z ]
   do
-    listgen2 "$LineNumbers" " - Selected Function - " "" "InstancesArray"
+    listgen2 "$LineNumbers" " - Selected Function - " "Back" "InstancesArray"
     RetVal=$?
     if [ $RetVal -gt 0 ]; then # <Cancel> selected
       break
@@ -258,7 +262,7 @@ do
     Counter=$((Counter+1))
   done
   local Message="\nChoose one item to edit:\n Item 1 is the delimiter that identifies functions;\n Item 2 is your preferred editor."
-  listgen2 "$PassList" "Settings" "" "ItemsArray"
+  listgen2 "$PassList" "Settings" "Done" "ItemsArray"
   RetVal=$?
   if [ $RetVal -gt 0 ]; then  # <Cancel> or [Esc]
     break
@@ -300,7 +304,7 @@ SettingsEdit() { # Form screen to edit settings
      ;;
     *) echo "Code hole at $LINENO" # > null
   esac
-  dialog --title " - $Title - " --inputbox "\n$Message\n" 16 51 2> output.file
+  dialog --backtitle "$BackTitle" --title " - $Title - " --inputbox "\n$Message\n" 16 51 2> output.file
   RetVal=$?
   case $RetVal in
   0) NewTag=`cat output.file`
