@@ -212,21 +212,22 @@ Selected() { # Displays the selected function and all calls
   # Strip trailing brackets
   Function=`echo $Function | sed s/"$Delimiter"//g`
   local Message="\nAll instances of '$Function'\n\n"
-  # Display a list of all instances of that function
+  # Create a list of all instances of that function
   LineNumbers=`cat -n $FileName | grep $Function | awk '{print $1}'`
-  AllInstances=`cat -n $FileName | grep $Function | awk '{print $2}'`
-  # Convert $AllInstances to an array
-  Counter=0
-  InstancesArray=()
-  for i in $AllInstances
+  cat $FileName | grep $Function > AllInstances # Copy all instances to a file
+  Counter=1
+  InstancesArray=() # Then read them into an array
+  for line in $LineNumbers
   do
-    InstancesArray[${Counter}]=$i
+    InstancesArray[${Counter}]=`sed -n "$Counter p" AllInstances | sed -e 's/^[ \t]*//'`
     Counter=$((Counter+1))
   done
+  rm AllInstances
+  # Combine and display, using listgen
   z=0
   while [ $z ]
   do
-    listgen2 "$LineNumbers" "" "" "InstancesArray"
+    listgen2 "$LineNumbers" " - Selected Function - " "" "InstancesArray"
     RetVal=$?
     if [ $RetVal -gt 0 ]; then # <Cancel> selected
       break
