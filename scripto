@@ -1,27 +1,50 @@
 #!/bin/bash
 
-# Scripto - an aid for working inside a single, large script
-# 1) Scan the script for all functions, and save to a file;
-# 2) User chooses a function from the file, and Scripto scans the 
-#    script for all instances of that function (with line numbers);
+# Scripto - an aid for working inside a single, large document
+# 1) Scan the document for all occurances of a preset descriptor - such as ();
+# 2) User chooses a function from the list, and Scripto scans the script
+#    for all instances (declaration and calls) of that function (with line numbers);
 # 3) User can then select an instance and open the script at that line
 #    using chosen text editor.
 # Written by Elizabeth Mills
 
 #
-# Functions
+# Functions ...
+
+# Listgen functions for display of lists
 #
-listgen1() {
+
+Printit() { # Display the chosen list
+  Counter=$((Counter/2))
+  # Calculate number of lines
+  echo $Message > output.file
+  countcharacters=`cat output.file | wc -c`  # Count number of characters in $Message
+  countlines=$((countcharacters/Width)) # Calculate lines
+  echo $Message | sed 's/[^\\]//g' > output.file   # Use sed to remove all except newlines
+  countnewlines=`cat output.file | wc -c` # Count newline characters
+  Height=$((countlines+countnewlines+Counter+16-Counter))
+  if [ $Height -gt 19 ]; then
+    Height=19
+    if [ $Width -lt 50 ]; then
+      Width=$((Width+10))
+    fi
+  fi
+  # Use $Counter and ${Options[@]} array in dialog
+  dialog --backtitle "$Backtitle" --title " $Title " --no-shadow --ok-button "Select" $Buttons \
+      --menu "$Message\n" $Height $Width $Counter "${Options[@]}" 2> output.file
+}
+
+listgen1() { # Produce a one-dimensional list
   local Backtitle="$Passed"
   local Title="$2"
   if [ $3 ]; then
     case $3 in
-      "nocancel") CancelButton="--nocancel"
+      "nocancel") Buttons="--nocancel"
       ;;
-      *) CancelButton="--cancel-label $3"
+      *) Buttons="--extra-button --extra-label $3"
     esac
   else
-    CancelButton=""
+    Buttons=""
   fi
   local Counter=0
   declare -a Options
@@ -43,17 +66,17 @@ listgen1() {
   Printit
 }
 
-listgen2() { 
+listgen2() { # Produce a two-dimensional list
   local Backtitle="$Passed"
   local Title="$2"
   if [ $3 ]; then
     case $3 in
-      "nocancel") CancelButton="--nocancel"
+      "nocancel") Buttons="--nocancel"
       ;;
-      *) CancelButton="--cancel-label $3"
+      *) Buttons="--extra-button --extra-label $3"
     esac
   else
-    CancelButton=""
+    Buttons=""
   fi
   declare -a Options
   local Counter=0
@@ -82,55 +105,119 @@ listgen2() {
   done
   Printit # The final frontier
 }
+# Operational functions
+#
 
-Printit() {
-  Counter=$((Counter/2))
-  # Calculate number of lines
-  echo $Message > output.file
-  countcharacters=`cat output.file | wc -c`  # Count number of characters in $Message
-  countlines=$((countcharacters/Width)) # Calculate lines
-  echo $Message | sed 's/[^\\]//g' > output.file   # Use sed to remove all except newlines
-  countnewlines=`cat output.file | wc -c` # Count newline characters
-  Height=$((countlines+countnewlines+Counter+16-Counter))
-  if [ $Height -gt 19 ]; then
-    Height=19
-    if [ $Width -lt 50 ]; then
-      Width=$((Width+10))
+MainMenu() {
+  CheckDataFile
+  Exit="No"
+  while [ $Exit = "No" ]
+  do
+    dialog --backtitle "$Backtitle" --title " - Main Menu - " --no-shadow --ok-button "Select" \
+    --cancel-label "Exit" --menu " " 10 55 2 \
+      "Files" "Choose the file you want to work on" \
+      "Settings" "Change the delimiter or editor" 2> output.file
+    RetVal=$?
+    if [ $RetVal -eq 0 ]; then
+      Action=`cat output.file`
+      case $Action in
+      "Files") ChooseWorkingFile
+          DisplaySelection
+      ;;
+      "Settings") Settings
+      ;;
+      *) echo "Error at $LINENO"
+      esac
+    else
+      rm output.file
+      exit # <Cancel> or [Esc]
     fi
-  fi
-  # Use $Counter and ${Options[@]} array in dialog
-  dialog --backtitle "$Backtitle" --title " $Title " --no-shadow --ok-button "Select" $CancelButton \
-      --menu "$Message\n" $Height $Width $Counter "${Options[@]}" 2> output.file
+  done  
 }
 
-# Select file (script) to open
-FileName="$1"
-if [ $2 ]; then
-  Editor="$2"
-else
-  Editor="nano"
-fi
+ChooseWorkingFile() { # User selects a script in the present working directory
+  Exit="No"
+  while [ $Exit = "No" ]
+  do
+    # Open a listgen menu displaying all files in the present working directory
+    ls > output.file
+    HowMany=`cat -n output.file | awk '{print $1}' | tail -c -3`
+    ItemsArray=()
+    Count=1
+    until [ $Count -gt $HowMany ]; do
+      ItemsArray[${Count}]=`sed -n "$Count p" output.file`
+      Count=$((Count+1))
+    done 
+    PassList=""
+    Count=0
+    for item in ${ItemsArray[@]}
+    do
+      Count=$((Count+1))
+      PassList="$PassList $Count"
+    done
+    Message="\nAll files in the current working directory\n\n"
+    listgen2 "$PassList" "Files" "" "ItemsArray"
+    RetVal=$?
+    case $RetVal in
+    0) FileName=${ItemsArray[`cat output.file`]}
+        break
+      ;;
+    *) exit
+    esac
+  done
+}
 
-# List all functions in selected script to a file
-AllFunctions=`cat $FileName | grep '()' | awk '{print $1}'`
+DisplaySelection() { # List all items matching '$Delimiter' in selected script
+# 1) Save a temporary sorted file of all items in the document containing delimiter
+  cat $FileName | grep "$Delimiter" | sort > temp.file 
+  AllRecords=`cat -n output.file | awk '{print $1}' | tail -c -3` # Count them
+# 2) Create variable ignoring any lines where the delimiter is NOT at the end of the first field
+  ShortList=`cat temp.file | awk '{print $1}' | grep "\>$Delimiter"` # This will be 1st argument of listgen2 
+# 3) Count valid records  
+  echo "$ShortList" > output.file # Copy to file to count records
+  HowMany=`cat -n output.file | awk '{print $1}' | tail -c -3` # Count them
+# 4) Now build an array of any text after the function definition
+  ItemsArray=()
+  Count=1
+  until [ $Count -gt $HowMany ]; do
+    Item=`cat output.file | sed -n "$Count p"` # Read the short line
+    echo $Item > len.file
+    Length=`wc -c len.file | cut -c 1-3` # Get the length
+    Length=$((Length-2))
+    FullLine=`cat temp.file | grep "${Item}"` # Get matching long record
+    echo "${FullLine}" | cut -c $((Length+5))- > working.file # Trim off first field
+    LongList[${Count}]=`cat working.file` # This is 4th argument of listgen2
+    Count=$((Count+1))
+  done
+  rm len.file
+  rm temp.file
+  rm working.file
+  Exit="No"
+  while [ $Exit = "No" ]
+  do
+    local Message="\nAll functions in '$FileName'\n\n"
+    # Display a list of functions for user to select from
+    listgen2 "$ShortList" "Functions" "" "LongList"
+    RetVal=$?
+    case $RetVal in
+    0) Selected
+    ;;
+    *) break # <Cancel> or [Esc]
+    esac
+  done
+}
 
-x=0
-while [ $x ]
-do
-  # Display a list of functions for user to select from
-  listgen1 "$AllFunctions"
-  if [ $? -gt 0 ]; then # <Cancel> selected
-    exit
-  fi
+Selected() { # Displays the selected function and all calls 
   Function=$(cat output.file) # Save name of selected function
   # Strip trailing brackets
-  Function=`echo $Function | sed s/"()"//g`
-
+  Function=`echo $Function | sed s/"$Delimiter"//g`
+  local Message="\nAll instances of '$Function'\n\n"
   # Display a list of all instances of that function
   LineNumbers=`cat -n $FileName | grep $Function | awk '{print $1}'`
   AllInstances=`cat -n $FileName | grep $Function | awk '{print $2}'`
   # Convert $AllInstances to an array
   Counter=0
+  InstancesArray=()
   for i in $AllInstances
   do
     InstancesArray[${Counter}]=$i
@@ -140,12 +227,94 @@ do
   while [ $z ]
   do
     listgen2 "$LineNumbers" "" "" "InstancesArray"
-    if [ $? -gt 0 ]; then # <Cancel> selected
+    RetVal=$?
+    if [ $RetVal -gt 0 ]; then # <Cancel> selected
       break
     else
       Instance=$(cat output.file) # Save line number of selected function
-      # Open the file at the selected instance's line number in chosen editor
       $Editor "+$Instance" "$FileName"
     fi
   done
+}
+
+Settings() { # Allows user to change editor or delimiter
+Exit="No"
+while [ $Exit = "No" ]
+do
+  CheckDataFile
+  HowMany=`cat -n .scriptosettings | awk '{print $1}' | tail -c -3`
+  declare -a ItemsArray
+  Count=1
+  until [ $Count -gt $HowMany ]; do
+    ItemsArray[${Count}]=`sed -n "$Count p" .scriptosettings`
+    Count=$((Count+1))
+  done 
+  PassList=""
+  Counter=1
+  for item in ${ItemsArray[@]}
+  do
+    PassList="$PassList $Counter"
+    Counter=$((Counter+1))
+  done
+  local Message="\nChoose one item to edit:\n Item 1 is the delimiter that identifies functions;\n Item 2 is your preferred editor."
+  listgen2 "$PassList" "Settings" "" "ItemsArray"
+  RetVal=$?
+  if [ $RetVal -gt 0 ]; then  # <Cancel> or [Esc]
+    break
+  fi
+  # First set variables based on selection
+  case `cat output.file | cut -c 1` in
+  1) Item="Delimiter"
+  ;;
+  2) Item="Editor"
+  ;;
+  *) echo "Error at $LINENO"
+  esac
+  # Then act on action chosen
+  case $RetVal in
+  0) SettingsEdit
+    ;;
+  *) Exit="Yes" # <Cancel> or [Esc]
+  esac
 done
+}
+
+CheckDataFile() { # Check if data file exists
+  if [ ! -f `pwd`/.scriptosettings ]; then
+    touch .scriptosettings
+    echo "()" > .scriptosettings
+    echo "nano" >> .scriptosettings
+  fi
+  Delimiter=`sed -n '1 p' .scriptosettings`
+  Editor=`sed -n '2 p' .scriptosettings`
+}
+
+SettingsEdit() { # Form screen to edit settings
+  case $Item in
+   "Delimiter") Message="Enter your preferred delimiter"
+        Title="Delimiter"
+      ;;
+   "Editor") Message="Enter your preferred editor (only Geany, Nano and Gedit support the line-finding facility)"
+        Title="Editor"
+     ;;
+    *) echo "Code hole at $LINENO" # > null
+  esac
+  dialog --title " - $Title - " --inputbox "\n$Message\n" 16 51 2> output.file
+  RetVal=$?
+  case $RetVal in
+  0) NewTag=`cat output.file`
+      if [ $Item = "Delimi" ]; then
+        sed -i "s/$Delimiter/$NewTag" .scriptosettings
+      elif [ $Item = "Editor" ]; then
+        sed -i "s/$Editor/$NewTag/" .scriptosettings
+      fi
+    ;;
+  *) Exit="Yes" # <Cancel> or [Esc]
+  esac
+}
+
+#
+# Execute
+#
+
+MainMenu
