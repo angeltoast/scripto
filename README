@@ -1,8 +1,15 @@
-Scripto is a simple programmers' utility for Linux users.
-It lists all functions within a chosen script, and all calls
-to any chosen function. Selecting a call or function opens the 
-preferred text editor at the call or function line.
+Scripto is a simple utility for working in GNU/Linux shell scripts. It lists all functions within a chosen script, and all calls to any chosen function. Selecting a call or function opens the preferred text editor at the call or function line.
+
 Place Scripto somewhere on your PATH to use for any project.
+
 Note that not all editors support the line-finding facility:
-... Geany, Nano, Gedit, Vi and Vim are among those that do
-... CodeBlocks, NetBeans, Bluefish are among those that don't
+... Geany, Nano, Gedit, Vi and Vim are among those that do;
+... CodeBlocks, NetBeans, Bluefish are among those that don't.
+
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+A copy of the GNU General Public License is available from the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+Elizabeth Mills 2016

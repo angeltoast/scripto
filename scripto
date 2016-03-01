@@ -1,21 +1,25 @@
 #!/bin/bash
 
-# Scripto - an aid for working inside a single, large document
-# 1) Scan the document for all occurances of a preset descriptor - such as ();
-# 2) User chooses a function from the list, and Scripto scans the script
-#    for all instances (declaration and calls) of that function (with line numbers);
-# 3) User can then select an instance and open the script at that line
-#    using chosen text editor.
-# Written by Elizabeth Mills
+# Scripto - an aid for working inside a single, large script
+# Designed for use with bash shell scripts, Scripto may also work with other scripts
+# 1) Scripto scans a selected script for all occurances of a preset descriptor - such as ();
+# 2) The user chooses a function from the list, and Scripto scans the script again for all
+#    instances (declaration and calls) of that function and displays them with line numbers;
+# 3) User can then select an instance and open the script at that line using their chosen text editor.
+
+# Written by Elizabeth Mills 2016
+#
+# This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+# A copy of the GNU General Public License is available from the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 #
 # Functions ...
-
-# Listgen functions for display of lists
 #
-
-BackTitle="Scripto - a programmers' utility"
-
+# 1 - Listgen functions for display of lists
+#
 Printit() { # Display the chosen list
   Counter=$((Counter/2))
   # Calculate number of lines
@@ -109,9 +113,9 @@ listgen2() { # Produce a two-dimensional list
   done
   Printit # The final frontier
 }
-# Operational functions
 #
-
+# 2 - Operational functions
+#
 MainMenu() {
   CheckDataFile
   Exit="No"
@@ -174,9 +178,9 @@ ChooseWorkingFile() { # User selects a script in the present working directory
 DisplaySelection() { # List all items matching '$Delimiter' in selected script
 # 1) Save a temporary sorted file of all items in the document containing delimiter
   cat $FileName | grep "$Delimiter" | sort > temp.file 
-  AllRecords=`cat -n output.file | awk '{print $1}' | tail -c -3` # Count them
-# 2) Create variable ignoring any lines where the delimiter is NOT at the end of the first field
-  ShortList=`cat temp.file | awk '{print $1}' | grep "\>$Delimiter"` # This will be 1st argument of listgen2 
+  # AllRecords=`cat -n output.file | awk '{print $1}' | tail -c -3` # Count them
+# 2) Create variable containing all lines with the delimiter, stripped from first field to end of line
+  ShortList=`cat temp.file | awk '{print $1}' | sed s/"$Delimiter".*//` # This will be 1st argument of listgen2 
 # 3) Count valid records  
   echo "$ShortList" > output.file # Copy to file to count records
   HowMany=`cat -n output.file | awk '{print $1}' | tail -c -3` # Count them
@@ -186,8 +190,7 @@ DisplaySelection() { # List all items matching '$Delimiter' in selected script
   until [ $Count -gt $HowMany ]; do
     Item=`cat output.file | sed -n "$Count p"` # Read the short line
     echo $Item > len.file
-    Length=`wc -c len.file | cut -c 1-3` # Get the length
-    Length=$((Length-2))
+    Length=`wc -c len.file | cut -c 1-2` # Only first two characters are length
     FullLine=`cat temp.file | grep "${Item}"` # Get matching long record
     echo "${FullLine}" | cut -c $((Length+5))- > working.file # Trim off first field
     LongList[${Count}]=`cat working.file | sed -e 's/^[ \t]*//'` # This is 4th argument of listgen2
@@ -213,8 +216,6 @@ DisplaySelection() { # List all items matching '$Delimiter' in selected script
 
 Selected() { # Displays the selected function and all calls 
   Function=$(cat output.file) # Save name of selected function
-  # Strip trailing brackets
-  Function=`echo $Function | sed s/"$Delimiter"//g`
   local Message="\nAll instances of '$Function'\n\n"
   # Create a list of all instances of that function
   LineNumbers=`cat -n $FileName | grep $Function | awk '{print $1}'`
@@ -306,12 +307,15 @@ SettingsEdit() { # Form screen to edit settings
   esac
   dialog --backtitle "$BackTitle" --title " - $Title - " --inputbox "\n$Message\n" 16 51 2> output.file
   RetVal=$?
+  
+  read
+  
   case $RetVal in
   0) NewTag=`cat output.file`
       if [ $Item = "Delimiter" ]; then
-        sed -i "s/${Delimiter}/${NewTag}/" .scriptosettings
+        sed -i "1 c ${NewTag}" .scriptosettings
       elif [ $Item = "Editor" ]; then
-        sed -i "s/${Editor}/${NewTag}/" .scriptosettings
+        sed -i "2 c ${NewTag}" .scriptosettings
       fi
     ;;
   *) Exit="Yes" # <Cancel> or [Esc]
@@ -322,4 +326,5 @@ SettingsEdit() { # Form screen to edit settings
 # Execute
 #
 
+BackTitle="            Scripto - a programmers' utility"
 MainMenu
