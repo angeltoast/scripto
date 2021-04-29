@@ -420,8 +420,8 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
         0)  # Ok/Return pressed
             GlobalResponse=$selected
             GlobalResult="$(head -n ${selected} ${filename} | tail -n 1)" # Read item from file
-            return $selected  # Exit with the menu 1tem number selected
-            ;;
+            return $selectedbutton  # Button 1 or 2
+        ;;
         1) # Up arrow:
             # First reprint currently selected item in plain
             GlobalCursorRow=$((selected+2))   # Set to new row (menu starts at row 3)
@@ -442,7 +442,7 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
             description="$(head -n ${selected} ${filename} | tail -n 1)"
             GlobalCursorRow=$((selected+2))
             CallPrintRev "$startpoint" "$longest" "$description"
-            ;;
+        ;;
         3) # Down arrow
             # First reprint currently selected item in plain
             GlobalCursorRow=$((selected+2))   # Set to new row (menu starts at row 3)
@@ -463,7 +463,7 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
             description="$(head -n ${selected} ${filename} | tail -n 1)"
             GlobalCursorRow=$((selected+2))                # Set to new row
             CallPrintRev "$startpoint" "$longest" "$description"
-            ;;
+        ;;
         4|2) # Right or left - button action, not a menu action
             
             if [ $selectedbutton -eq 1 ]; then  # Switch buttons
@@ -472,7 +472,7 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
               selectedbutton=1
             fi
             CallButtons "$buttontext" "$selectedbutton" $buttonrow
-            ;;
+        ;;
         *) continue   # Do nothing
         esac
     done

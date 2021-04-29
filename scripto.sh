@@ -23,7 +23,7 @@ source lister.sh
 
 function ScriptoMain {
     
-    local editor exit
+    local editor exit term ignore
 
     CallHeading
 
@@ -34,9 +34,17 @@ function ScriptoMain {
     do
         CallMenu "Find Settings"
         case $GlobalResponse in
-        1)  CallForm "Enter the text to search for: "
+        1)  CallHeading
+            GlobalCursorRow=5
+            CallForm "Enter the text to search for: "
+            term="$GlobalResult"
+            GlobalCursorRow=$((GlobalCursorRow+2))
+            CallForm "Ignore case? y/N : "
+            ignore="$GlobalResult"
+            ignore="${ignore,,}"                    # Ensure lower case
+            
             rm temp.file
-            Prep "$GlobalResult"
+            Prep "$term" "$ignore"
         ;;
         2)  $editor .scriptosettings
         ;;
@@ -46,27 +54,38 @@ function ScriptoMain {
 }
 
 function Prep   # Prepare search data
-{               # $1 search text
-    local text items i line filename linenumber
+{               # $1 search text; $2 ignore case (y)
+    local text items i line filename linenumber width
     text="$1"
 
+    width=$(tput cols)
+    width=$((width-2))
+
     rm output.file temp.file                # Just to be sure
-    grep -ns "$text" * >> temp.file         # Find all instances of text in all files
+
+    if [ "$2" == "y" ]; then 
+        grep -ins "$text" * >> temp.file    # Find all instances ignoring case
+    else
+        grep -ns "$text" * >> temp.file     # Find all instances observing case
+    fi
+    
     items=$(cat temp.file | wc -l)          # Count lines in file
         
     for (( i=1; i <= items; ++i )) 
     do
-        line="$(head -n ${i} temp.file | tail -n 1)"    # Read one line at a time
-        echo ${line##*( )} >> output.file               # Remove all leading spaces
+        line="$(head -n ${i} temp.file | tail -n 1)"            # Read one line at a time
+        echo ${line##*( )} | cut -c 1-$width  >> output.file    # Remove all leading spaces
+                                                                # And cut it down to fit width
     done
 
     rm temp.file
-    
+
     # Now display the results
     while :   # User can repeat 
     do
-        CallLongMenu output.file # Display as a menu (may scroll off screen)
-        if [ $GlobalResponse -eq 1 ]; then      # User is backing out
+        CallLongMenu output.file    # Display as a menu (may scroll off screen)
+       
+        if [ $? -eq 2 ]; then       # User is backing out (exit button pressed)
             rm output.file
             return 0
         else
