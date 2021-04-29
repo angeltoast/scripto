@@ -1,15 +1,28 @@
-Scripto is a simple utility for working in GNU/Linux shell scripts. It lists all functions within a chosen script, and all calls to any chosen function. Selecting a call or function opens the preferred text editor at the call or function line.
+Scripto is a programmer's utility for searching for text in a working directory.
 
-Place Scripto somewhere on your PATH to use for any project.
+Designed for use with bash shell scripts, Scripto may also work with other scripts.
+
+1) You enter text to find, and Scripto scans all files in the current directory;
+2) Scripto then displays all occurences, with file names and line numbers as a menu;
+3) You can then select one and your chosen text editor will open the file at that line.
+--------------------------------------------------------------------
+The program described herein is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+A copy of the GNU General Public License is available from:
+The Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+--------------------------------------------------------------------
+Scripto is free software; you can redistribute it and/or modify it under the terms of the
+GNU General Public License as published by the Free Software Foundation; either version 2 of
+the License, or (at your option) any later version.
+--------------------------------------------------------------------
+The ideal situation for Scripto would be in your workshop directory. Note that Scripto sources the Lister library of simple interfaces for use in a predominantly text-based environment, so make sure that a copy of lister.sh is also present. A copy is distributed with Scripto for your convenience.
+
+Scripto is kept as basic as possible - you're a programmer, you know what to do.
+
+Some of your searches will produce very long lists of results, that scroll off the visible area. In order to pick from these lists, it is suggested that you either enter a longer search term, to get a shorter list, or enlarge the working window vertically, if possible, until the top of the list is visible.
 
 Note that not all editors support the line-finding facility:
 ... Geany, Nano, Gedit, Vi and Vim are among those that do;
 ... CodeBlocks, NetBeans, Bluefish are among those that don't.
 
-This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-A copy of the GNU General Public License is available from the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-Elizabeth Mills 2016
+Elizabeth Mills 29th April 2021
