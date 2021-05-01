@@ -259,9 +259,9 @@ function DoMenu  # Simple menu
       fi
       counter=$((counter+1))
     done
-    
     GlobalCursorRow=$((GlobalCursorRow+1))
-    buttonRow=$GlobalCursorRow
+    DoFirstItem "Use cursor keys to navigate"
+    buttonRow=$((GlobalCursorRow+1))
     selected=1
     selectedbutton=1
     DoButtons "$buttontext" "$selectedbutton" $buttonRow
@@ -351,13 +351,15 @@ function DoLongMenu    # Advanced menuing function with extended descriptions
     local selectedbutton buttonrow buttontext                     # buttons
       
     # Check that the named file exists, if not, throw a wobbly
-    if [ -f "$1" ]; then filename="$1"
-    else DoMessage "$1 not found - unable to continue"   # Display error message
+    if [ -f "$1" ]; then
+        filename="$1"
+    else
+        DoMessage "$1 not found - unable to continue"   # Display error message
         return 0
     fi
       
-    if [ "$2" == "" ]; then   # Needed for drawing and highlighting buttons
-        buttontext="Ok Exit"
+    if [ "$2" == "" ]; then 
+        buttontext="Ok Exit"  # Needed for drawing and highlighting buttons
     else
         buttontext="$2"
     fi
@@ -366,22 +368,19 @@ function DoLongMenu    # Advanced menuing function with extended descriptions
     winwidth=$(tput cols)             # Window width
     maxlen=$((winwidth -2))           # Maximum allowable item length
     items=$(cat "$filename" | wc -l)  # Count lines in file
-    items=$((items + 1))              # Because 'wc -l' starts at 0
     longest=0
     
     # Find length of longest item in file for use in reverse colour
     for (( i=1; i <= items; ++i ))
     do
-        # Get line $i from text file
         description="$(head -n ${i} ${filename} | tail -n 1)" # Read item from file
         length=$(echo "$description" | wc -c)                 # Length in characters
-        # Make sure it's not longer than window width
         if [ $length -gt $maxlen ]; then
           trimmed="${description:0:$maxlen}"      # Trim the text
           description="$trimmed"                  # Save the shorter text
           length=$(echo "$description" | wc -c)   # Reset length
         fi
-        # Compare with current longest. If longer, save as longest
+
         if [ $length -gt $longest ]; then
           longest=$length
           startpoint=$(( (winwidth - length) /2 ))   # Position of first character
@@ -392,6 +391,7 @@ function DoLongMenu    # Advanced menuing function with extended descriptions
     GlobalCursorRow=2
     DoFirstItem "$headline"
     GlobalCursorRow=3
+    
     # Now run through the file again to print each item (Top one will be highlighted)
     selected=1
     for (( i=1; i <= $items; ++i ))
@@ -406,14 +406,16 @@ function DoLongMenu    # Advanced menuing function with extended descriptions
         fi
     done
     
-    buttonrow=$((GlobalCursorRow+1))
+    GlobalCursorRow=$((GlobalCursorRow+1))
+    DoFirstItem "Use cursor keys to navigate"
+    buttonrow=$((GlobalCursorRow))
     selected=1
     selectedbutton=1
     DoButtons "$buttontext" "$selectedbutton" $buttonrow
     
-    while true      # The cursor key action will change either the hightlighted
-    do              # menu item or one of the buttons.
-        DoKeypress   # Sets numeric $GlobalInt for up/down or left/right)
+    while true          # The cursor key action will change either the hightlighted
+    do                  # menu item or one of the buttons.
+        DoKeypress      # Sets numeric $GlobalInt for up/down or left/right)
         case "$GlobalInt" in
         0)  # Button 1 or button 2 pressed
             GlobalInt=$selected

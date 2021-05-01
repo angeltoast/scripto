@@ -69,6 +69,8 @@ function ScriptoMenu
         ScriptoFind
     ;;
     2)  $editor .scriptosettings
+        editor="$(head -n 1 .scriptosettings | tail -n 1 | cut -d':' -f2)"  
+        terminal="$(head -n 2 .scriptosettings | tail -n 1 | cut -d':' -f2)"  
         ScriptoMenu
     ;;
     *)  exit
@@ -104,37 +106,45 @@ function ScriptoFind
 
 function ScriptoPrep    # ScriptoPrepare search data
 {                       # $1 search text; $2 ignore case (y/n)
-    local term items i line filename linenumber width
-    term="$1"
-    width=$(tput cols)
-    width=$((width-2))
-
-    # temp.file is prepared with crude data for DoMega
-    if [ "$2" == "y" ]; then 
-        grep -ins "$term" * >> temp.file    # Find all instances ignoring case
-    else
-        grep -ns "$term" * >> temp.file     # Find all instances observing case
-    fi
+    while true
+    do  
+        local term items i line filename linenumber width
+        term="$1"
+        ignore="$2"
+        width=$(tput cols)
+        width=$((width-2))
     
-    # Now display the results, and user can select an item
-    DoMega "temp.file" "$term"         # DoMega will handle diplay and user input
-    rm output.file 2>/dev/null         # The work file - must be rebuilt
-    if [ "$GlobalChar" != "" ]; then   # User is not backing out, then prepare for editing
-        filename="$(echo $GlobalChar | head -n 1 | tail -n 1 | cut -d':' -f2)"    # -f1 is record number
-        linenumber="$(echo $GlobalChar | head -n 1 | tail -n 1 | cut -d':' -f3)"
-        $editor "$filename" "+$linenumber"   # Open the file in editor at chosen line
-    fi
+        # temp.file is prepared with crude data for DoMega
+        if [ "$2" == "y" ]; then 
+            grep -ins "$term" * >> temp.file    # Find all instances ignoring case
+        else
+            grep -ns "$term" * >> temp.file     # Find all instances observing case
+        fi
+                
+        # Now display the results, and user can select an item
+        DoMega "temp.file" "$term" "$ignore"    # DoMega will handle diplay and user input
+        rm output.file 2>/dev/null              # The work file - must be rebuilt
+        if [ "$GlobalChar" == "" ]; then        # User is backing out
+            return
+        else                                    # Prepare for editing
+            filename="$(echo $GlobalChar | head -n 1 | tail -n 1 | cut -d':' -f2)"    # -f1 is record number
+            linenumber="$(echo $GlobalChar | head -n 1 | tail -n 1 | cut -d':' -f3)"
+            $editor "$filename" "+$linenumber"   # Open the file in editor at chosen line
+        fi
+    done
 }
 
 function DoMega   # Cleans up crude data from temp.file and prepares output.file
 {   # Generates a (potentially multi-page) numbered list from a file
-    # Parameter: $1 Name of the file containing all the items to be listed; $2 Search term
+    # Parameters:
+    # $1 Name of the file containing all the items; $2 Search term; $3 ignore (y/n)
     local advise previous next instructions pages pageNumber width
     local winHeight items i counter line display startpoint saveCursorRow term
     term="$2"
+    ignore="$3"
     width=$(tput cols)
     width=$((width-2))
-    items=$(cat $1 | wc -l)             # Count lines in file
+    items=$(cat $1 | wc -l)             # Count lines in file  
     winHeight=$(tput lines)
     display=$((winHeight-6))            # Items to display in one pageful
     pages=$((items/display))
@@ -149,12 +159,12 @@ function DoMega   # Cleans up crude data from temp.file and prepares output.file
         line="$i:$line"                                         # Number it
         echo ${line##*( )} | cut -c 1-$width  >> output.file    # Remove all leading spaces
     done                                                        # and cut it down to fit width
-
+    
     # Dump the source file, which has to be rebuilt each time
     rm temp.file 2>/dev/null  # Clear the temp file (hide errors)
 
     if [ $items -le $display ]; then    # DoLongMenu is more convenient for a single page
-        DoLongMenu "output.file" "Ok Exit" "$term"
+        DoLongMenu "output.file" "Ok Exit" "Lines containing '$term'"
         return $?
     fi
 
