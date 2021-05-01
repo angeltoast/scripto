@@ -1,9 +1,9 @@
 Scripto is a programmer's utility for searching for text in a working directory.
 
-Designed for use with bash shell scripts, Scripto may also work with other scripts.
+Designed for use with bash shell scripts, Scripto will work with any plain text files.
 
-1) You enter text to find, and Scripto scans all files in the current directory;
-2) Scripto then displays all occurences, with file names and line numbers as a menu;
+1) You enter text to find, and Scripto searches for it in all files in the current directory;
+2) Scripto then displays all occurences, with file names and line numbers;
 3) You can then select one and your chosen text editor will open the file at that line.
 --------------------------------------------------------------------
 The program described herein is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
@@ -15,14 +15,14 @@ Scripto is free software; you can redistribute it and/or modify it under the ter
 GNU General Public License as published by the Free Software Foundation; either version 2 of
 the License, or (at your option) any later version.
 --------------------------------------------------------------------
-The ideal situation for Scripto would be in your workshop directory. Note that Scripto sources the Lister library of simple interfaces for use in a predominantly text-based environment, so make sure that a copy of lister.sh is also present. A copy is distributed with Scripto for your convenience.
+The ideal situation for Scripto would be in your workshop directory.
+Note that Scripto sources the Lister library of simple interfaces for use in a predominantly text-based environment, so make sure that a copy of lister.sh is also present.
+A copy is distributed with Scripto for your convenience.
 
 Scripto is kept as basic as possible - you're a programmer, you know what to do.
 
-Some of your searches will produce very long lists of results, that scroll off the visible area. In order to pick from these lists, it is suggested that you either enter a longer search term, to get a shorter list, or enlarge the working window vertically, if possible, until the top of the list is visible.
-
 Note that not all editors support the line-finding facility:
 ... Geany, Nano, Gedit, Vi and Vim are among those that do;
-... CodeBlocks, NetBeans, Bluefish are among those that don't.
+... CodeBlocks, NetBeans and Bluefish are among those that don't.
 
-Elizabeth Mills 29th April 2021
+Elizabeth Mills 1st May 2021

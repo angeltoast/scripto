@@ -17,7 +17,7 @@
 #            General Public License for more details.
 
 # Functions may return the content of a selected item via the global
-# variable GlobalResult, and the item's menu number via GlobalResponse.
+# variable GlobalChar, and the item's menu number via GlobalInt.
 # All other variables are local, and passed as parameters between functions.
 # See lister.manual for guidance on the use of these functions
 
@@ -25,45 +25,44 @@
 # Class/Function  Line	Purpose
 # --------------------  ------------------------
 # .. Shared class ..    General-purpose functions
-# CallNotFound     54   General warning message
-# CallHeading      61   Prepare a new window with heading
-# CallForm         84   Centred prompt for user-entry
-# CallMessage     102   Prints a message with Ok button
-# CallButtons     130   Prints one or two buttons
+# DoNotFound     54   General warning message
+# DoHeading      61   Prepare a new window with heading
+# DoForm         83   Centred prompt for user-entry
+# DoMessage     101   Prints a message with Ok button
+# DoButtons     133   Prints one or two buttons
 # .. Menu class ..      Displaying and using menus
-# CallMenu        182   Generates a simple menu of one-word items
-# CallLongMenu    309   Generates a menu of multi-word items
-# CallFirstItem   447   Prints a single, centred item
-# CallNextItem    472   Prints successive aligned items
-# CallPrintRev    478   Reverses text colour at appointed position
-# CallMoveCursor  493   Respond to keypress
+# DoMenu        185   Generates a simple menu of one-word items
+# DoLongMenu    340   Generates a menu of multi-word items
+# DoFirstItem   483   Prints a single, centred item
+# DoNextItem    504   Prints successive aligned items
+# DoPrintRev    510   Reverses text colour at appointed position
+# DoKeypress    525   Respond to keypress
 # .. List class ..      Display long lists and accept user input
-# CallLister      536   Generates a numbered list of one-word items in columns
-# CallSelectPage  661   Used by CallLister to manage page handling
-# CallPrintPage   728   Used by CallLister to display selected page
+# DoLister      563   Generates a numbered list of one-word items in columns
+# DoSelectPage  695   Used by DoLister to manage page handling
+# DoPrintPage   761   Used by DoLister to display selected page
 # --------------------  ------------------------
 
 # Global variables
-GlobalResponse=0                # Output (menu item number)
-GlobalResult=""                 # Output (menu item text)
+GlobalInt=0                # Output (menu item number)
+GlobalChar=""                 # Output (menu item text)
 GlobalCursorRow=0               # For alignment across functions
 GlobalBacktitle="~ LISTER ~"
 
 # class Shared
 # }
-function CallNotFound   # Errror reporting
+function DoNotFound   # Errror reporting
 {   # Optional message text
-    CallHeading
-    PrintOne "$1 Please try again ..."
-    CallButtons "Ok" 1 9
+    echo "${FUNCNAME[0]} at line $LINENO in ${BASH_SOURCE[1]} called from ${FUNCNAME[1]} in  at line ${BASH_LINENO[2]}"
+    # PrintOne "$1 Please try again ..."
+    DoButtons "Ok" 1 9
 }
 
-function CallHeading    # Always use this function to prepare the screen
+function DoHeading    # Always use this function to prepare the screen
 { 
     clear
     
     local winwidth limit text textlength startpoint
-    
     winwidth=$(tput cols)                     # Recheck window width  
     text="$Backtitle"                         # Use Global variable
     textlength=$(echo $text | wc -c)          # Count characters
@@ -79,11 +78,11 @@ function CallHeading    # Always use this function to prepare the screen
     tput bold                                 # Display will be bold
     printf "%-s\\n" "$text"
     tput sgr0                                 # Reset colour inversion
-} # End CallHeading
+} # End DoHeading
 
-function CallForm    # Aligned prompt for user-entry
+function DoForm    # Centred prompt for user-entry
 {   # $1 Text for prompt
-    # Returns user entry through $GlobalResponse
+    # Returns user entry through $GlobalInt
 
     local winwidth length startpoint empty
   
@@ -96,10 +95,10 @@ function CallForm    # Aligned prompt for user-entry
         startpoint=0
     fi
     tput cup $GlobalCursorRow $startpoint                     # Move cursor to startpoint
-    read -p "$1" GlobalResult
-} # End CallForm
+    read -p "$1" GlobalChar
+} # End DoForm
 
-function CallMessage    # Display a message with an 'Ok' button to close
+function DoMessage    # Display a message with an 'Ok' button to close
 {                       # $1 = message text
 
     local winwidth text textlength textRow buttonRow startpoint
@@ -116,7 +115,7 @@ function CallMessage    # Display a message with an 'Ok' button to close
         startpoint=$(( (winwidth - 10) / 2 ))
     fi
   
-    CallHeading                                  # Prepare screen
+    DoHeading                                  # Prepare screen
 
     textRow=$(tput lines)
     textRow=$((textRow / 3))
@@ -124,15 +123,14 @@ function CallMessage    # Display a message with an 'Ok' button to close
     printf "%-s\\n" "$text"
     buttonRow=$((textRow + 2))
 
-    
-    CallButtons "Ok" 1 $buttonRow                # Print ok button
+    DoButtons "Ok" 1 $buttonRow                # Print ok button
 
     tput civis &                                 # Hide the cursor
     read -p ""
     tput cnorm                                   # Ensure normal cursor
-} # End CallMessage
+} # End DoMessage
 
-function CallButtons
+function DoButtons
 {   # $1 Button text; $2 Highlight one of the buttons; $3 buttonRow
     # Button string should contain one or two words: eg: 'Ok' or 'Ok Exit'
    
@@ -179,23 +177,22 @@ function CallButtons
     printf "%-s\\n" "$button2string"            # Print button2
     tput sgr0 	                                # Reset colour
     return $selected
-} # End CallButtons
+} # End DoButtons
 # } End class Shared
 
 # class Menu
 # {
-function CallMenu  # Simple menu
+function DoMenu  # Simple menu
 {       # $1 String of single-word menu items (or the name of a file)
         # $2 button text eg: 'Ok Exit'
-        # $3 May be a message or empty
-        # Sets global variable GlobalResponse with the number of the item selected
-        # and GlobalResult with the text of the item selected
+        # $3 May be a headline or empty
+        # Sets global variable GlobalInt with the number of the item selected
+        # and GlobalChar with the text of the item selected
         # Also sets the system return value ($?) with the number of the item selected
         # Read lister.manual for full details
   
     local winwidth startpoint padding itemlen maxlen counter menulist
     local name items buttontext message buttonRow item i
-   
     winwidth=$(tput cols) 
     padding=""
     maxlen=1
@@ -209,7 +206,7 @@ function CallMenu  # Simple menu
             menulist="$menulist $item"              # Add to variable
         done
     elif [[ "$1" == "" ]]; then
-        CallMessage "No data to work with"
+        DoMessage "No data to work with"
         return 1
     else
         menulist="$1"    
@@ -227,7 +224,7 @@ function CallMenu  # Simple menu
       *) message="$2"
     esac
    
-    CallHeading                             # Prepare page
+    DoHeading                             # Prepare page
   
     counter=0
     # Find length of longest item for use in reverse colour
@@ -254,10 +251,10 @@ function CallMenu  # Simple menu
     do
       name="$i"                       # Read item from list
       if [ $counter -eq 1 ]; then     # First item - print highlighted
-        CallPrintRev "$startpoint" "$longest" "$name" # Print reverse (padded)
+        DoPrintRev "$startpoint" "$longest" "$name" # Print reverse (padded)
         GlobalCursorRow=$((GlobalCursorRow + 1 ))
        else
-        CallNextItem "$startpoint" "$name" # Print subsequent line
+        DoNextItem "$startpoint" "$name" # Print subsequent line
         GlobalCursorRow=$((GlobalCursorRow + 1 ))
       fi
       counter=$((counter+1))
@@ -267,19 +264,19 @@ function CallMenu  # Simple menu
     buttonRow=$GlobalCursorRow
     selected=1
     selectedbutton=1
-    CallButtons "$buttontext" "$selectedbutton" $buttonRow
+    DoButtons "$buttontext" "$selectedbutton" $buttonRow
 
-    while :   # The cursor key action will change either the hightlighted menu item
+    while true   # The cursor key action will change either the hightlighted menu item
     do        # or one of the buttons.
-        CallMoveCursor   # Sets numeric $GlobalResponse for up/down or left/right)
-        case "$GlobalResponse" in
+        DoKeypress   # Sets numeric $GlobalInt for up/down or left/right)
+        case "$GlobalInt" in
         0)  # Ok/Return pressed
             if [ $selectedbutton -eq 1 ]; then 
-                GlobalResponse=$selected  # Exit with the menu 1tem selected
-                GlobalResult="$name"
+                GlobalInt=$selected  # Exit with the menu 1tem selected
+                GlobalChar="$name"
             else
-                GlobalResponse=0          # Exit with no 1tem selected
-                GlobalResult=""
+                GlobalInt=0          # Exit with no 1tem selected
+                GlobalChar=""
             fi
             return $selected
         ;;
@@ -304,7 +301,7 @@ function CallMenu  # Simple menu
             # Print newly selected item in reverse colour (padded)
             name="$(echo $menulist | cut -d' ' -f$selected)"
             GlobalCursorRow=$((selected+2))
-            CallPrintRev "$startpoint" "$longest" "$name"
+            DoPrintRev "$startpoint" "$longest" "$name"
         ;;
         3) # Down arrow
             # First reprint currently selected item in plain
@@ -325,7 +322,7 @@ function CallMenu  # Simple menu
             # Print newly selected item in reverse colour (padded)
             name="$(echo $menulist | cut -d' ' -f$selected)"
             GlobalCursorRow=$((selected+2))                # Set to new row
-            CallPrintRev "$startpoint" "$longest" "$name"
+            DoPrintRev "$startpoint" "$longest" "$name"
         ;;
         4|2) # Right or left - button action, not a menu action
             if [ $selectedbutton -eq 1 ]; then  # Switch buttons
@@ -333,19 +330,19 @@ function CallMenu  # Simple menu
             else
                 selectedbutton=1
             fi
-            CallButtons "$buttontext" "$selectedbutton" $buttonRow
+            DoButtons "$buttontext" "$selectedbutton" $buttonRow
         ;;
         *) continue   # Do nothing
         esac
     done
-} # End CallMenu
+} # End DoMenu
 
-function CallLongMenu    # Advanced menuing function with extended descriptions
+function DoLongMenu    # Advanced menuing function with extended descriptions
 {   # $1 The name of the file containing the verbose menu items
     # $2 Optional button text eg: 'Ok Exit' (if empty will default to 'Ok Exit')
-    # $3 Optional message (if message is required, $2 must be passed, even if null)
-    # CallLongMenu requires the named file to exist.
-    # longmenu.file shall contain the verbose menu items (max length 50 characters),
+    # $3 Optional headline (if headline is required, $2 must be passed, even if null)
+    # DoLongMenu requires the named file to exist.
+    # longmenu.file must contain the verbose menu items (max length 50 characters),
     # one item to a line 
 
     local filename winwidth message                               # Basics
@@ -355,7 +352,7 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
       
     # Check that the named file exists, if not, throw a wobbly
     if [ -f "$1" ]; then filename="$1"
-    else CallMessage "$1 not found - unable to continue"   # Display error message
+    else DoMessage "$1 not found - unable to continue"   # Display error message
         return 0
     fi
       
@@ -365,7 +362,7 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
         buttontext="$2"
     fi
 
-    message="$3"
+    headline="$3"
     winwidth=$(tput cols)             # Window width
     maxlen=$((winwidth -2))           # Maximum allowable item length
     items=$(cat "$filename" | wc -l)  # Count lines in file
@@ -378,7 +375,6 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
         # Get line $i from text file
         description="$(head -n ${i} ${filename} | tail -n 1)" # Read item from file
         length=$(echo "$description" | wc -c)                 # Length in characters
-    
         # Make sure it's not longer than window width
         if [ $length -gt $maxlen ]; then
           trimmed="${description:0:$maxlen}"      # Trim the text
@@ -392,18 +388,20 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
         fi
     done
     
-    # Now run through the file again to print each item (Top one will be highlighted)
-    CallHeading
+    DoHeading
+    GlobalCursorRow=2
+    DoFirstItem "$headline"
     GlobalCursorRow=3
+    # Now run through the file again to print each item (Top one will be highlighted)
     selected=1
     for (( i=1; i <= $items; ++i ))
     do
         description="$(head -n ${i} ${filename} | tail -n 1)" # Read item from file
         if [ $i -eq 1 ]; then                     # First item - print highlighted
-          CallPrintRev "$startpoint" "$longest" "$description" # Print reverse (padded)
+          DoPrintRev "$startpoint" "$longest" "$description" # Print reverse (padded)
           GlobalCursorRow=$((GlobalCursorRow + 1 ))
          else
-          CallNextItem "$startpoint" "$description" # Print subsequent line
+          DoNextItem "$startpoint" "$description" # Print subsequent line
           GlobalCursorRow=$((GlobalCursorRow + 1 ))
         fi
     done
@@ -411,15 +409,19 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
     buttonrow=$((GlobalCursorRow+1))
     selected=1
     selectedbutton=1
-    CallButtons "$buttontext" "$selectedbutton" $buttonrow
+    DoButtons "$buttontext" "$selectedbutton" $buttonrow
     
-    while :   # The cursor key action will change either the hightlighted menu item
-    do        # or one of the buttons.
-        CallMoveCursor   # Sets numeric $GlobalResponse for up/down or left/right)
-        case "$GlobalResponse" in
-        0)  # Ok/Return pressed
-            GlobalResponse=$selected
-            GlobalResult="$(head -n ${selected} ${filename} | tail -n 1)" # Read item from file
+    while true      # The cursor key action will change either the hightlighted
+    do              # menu item or one of the buttons.
+        DoKeypress   # Sets numeric $GlobalInt for up/down or left/right)
+        case "$GlobalInt" in
+        0)  # Button 1 or button 2 pressed
+            GlobalInt=$selected
+            if [ $selectedbutton -eq 2 ]; then
+                GlobalChar=""                 # No mresult on exit button
+            else
+                GlobalChar="$(head -n ${selected} ${filename} | tail -n 1)" # Read item from file
+            fi
             return $selectedbutton  # Button 1 or 2
         ;;
         1) # Up arrow:
@@ -441,7 +443,7 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
             # Print newly selected item in reverse colour (padded)
             description="$(head -n ${selected} ${filename} | tail -n 1)"
             GlobalCursorRow=$((selected+2))
-            CallPrintRev "$startpoint" "$longest" "$description"
+            DoPrintRev "$startpoint" "$longest" "$description"
         ;;
         3) # Down arrow
             # First reprint currently selected item in plain
@@ -462,7 +464,7 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
             # Print newly selected item in reverse colour (padded)
             description="$(head -n ${selected} ${filename} | tail -n 1)"
             GlobalCursorRow=$((selected+2))                # Set to new row
-            CallPrintRev "$startpoint" "$longest" "$description"
+            DoPrintRev "$startpoint" "$longest" "$description"
         ;;
         4|2) # Right or left - button action, not a menu action
             
@@ -471,20 +473,16 @@ function CallLongMenu    # Advanced menuing function with extended descriptions
             else
               selectedbutton=1
             fi
-            CallButtons "$buttontext" "$selectedbutton" $buttonrow
+            DoButtons "$buttontext" "$selectedbutton" $buttonrow
         ;;
         *) continue   # Do nothing
         esac
     done
-} # End CallLongMenu
+} # End DoLongMenu
 
-function CallFirstItem  # Aligned text according to screen size
-{                       # $1 Text to print
-
+function DoFirstItem  # Aligned text according to screen size
+{                     # $1 Text to print
     local winwidth maxlen textprint textlength startpoint
-
-    # GlobalCursorRow=1   # First item on first row (logical, aye?)
-      
     winwidth=$(tput cols)                   # Recheck window width  
     maxlen=$((winwidth-2))                  # Set Limit to 2 characters < Width
     textprint="$1"                          # Text passed from caller
@@ -494,22 +492,22 @@ function CallFirstItem  # Aligned text according to screen size
         textprint="${textprint:0:$maxlen}"  # Limit to printable length
         textlength=$maxlen
     fi
-    startpoint=$(( (winwidth - textlength) /2 ))
-      
+     
     startpoint=$(( (winwidth - textlength) / 2 ))   # Horizontal startpoint
     tput cup $GlobalCursorRow $startpoint           # Move cursor to startpoint
       
     printf "%-s\\v" "$textprint"                    # Print the item
     GlobalCursorRow=$((GlobalCursorRow+1))          # Advance line counter
-} # End CallFirstItem
+    return $startpoint
+} # End DoFirstItem
 
-function CallNextItem   # Subsequent item in an aligned list
+function DoNextItem   # Subsequent item in an aligned list
 {                       # $1 startpoint; $2 Item text
   tput cup "$GlobalCursorRow" "$1"  # Move cursor to row and startpoint
   printf "%-s\\n" "$2"              # Print with a following newline
 }
 
-function CallPrintRev   # Prints selected item by reversing colour
+function DoPrintRev   # Prints selected item by reversing colour
 {    # $1 Startpoint $2 Length of longest; $3 Item text
 
     local longest padding spaces itemlength
@@ -524,51 +522,47 @@ function CallPrintRev   # Prints selected item by reversing colour
     tput sgr0 	                        # Reset colour
 }
 
-function CallMoveCursor # Reads keyboard and returns value via GlobalResponse
+function DoKeypress # Reads keyboard and returns value via GlobalInt
 {  
     local keypress
       
-    while :
+    while true  # Respond to keypress
     do
         tput civis &                          # Hide cursor
         read -rsn1 keypress                   # Capture key press
+        tput cnorm
         case "$keypress" in
-          "") # Ok/Return pressed
-            tput cnorm
-            GlobalResponse=0
+        "") # Ok/Return pressed
+            GlobalInt=0
             break
             ;;
         A) # Up arrow:
-            tput cnorm
-            GlobalResponse=1
+            GlobalInt=1
             break
             ;;
         B) # Down arrow
-            tput cnorm
-            GlobalResponse=3
+            GlobalInt=3
             break
             ;;
         C) # Right arrow
-            tput cnorm
-            GlobalResponse=4
+            GlobalInt=4
             break
             ;;
         D) # Left arrow
-            tput cnorm
-            GlobalResponse=2
+            GlobalInt=2
             break
             ;;
         *)  keypress=""
         esac
     done
-} # End CallMoveCursor
+} # End DoKeypress
 # } End class Menu
 
 # class List
 # {
-function CallLister  # Generates a (potentially multi-page) list from a file.
+function DoLister  # Generates a (potentially multi-page) list from a file.
 {   # Parameter: $1 is the name of the file containing all the items to be listed
-    # The calling function must creates the file* before calling CallLister
+    # The calling function must creates the file* before calling DoLister
     #       * The file must have one word per item, one item per line
 
         local totalItems lastItem itemLen testLen
@@ -603,7 +597,7 @@ function CallLister  # Generates a (potentially multi-page) list from a file.
 
         # Check that the named file exists, if not, throw a wobbly
         if [ ! -f "$1" ]; then
-            CallMessage "$1 not found - unable to continue"   # Display error message
+            DoMessage "$1 not found - unable to continue"   # Display error message
             return 0
         fi
         
@@ -614,7 +608,7 @@ function CallLister  # Generates a (potentially multi-page) list from a file.
 
         tput cnorm   # Ensure cursor is visible
 
-        CallHeading  # Prepare the window
+        DoHeading  # Prepare the window
 
         # Fill the global array of columns. Each element in the array holds one column
         widthOfColumns=2
@@ -656,7 +650,7 @@ function CallLister  # Generates a (potentially multi-page) list from a file.
     rm temp.file    # Tidy up
 
     # Now build GlobalPagesArray with just enough columns to fit page width each time
-    while :  # These elements are numeric (column numbers). The records are still
+    while true  # These elements are numeric (column numbers). The records are still
     do       # in GlobalColumnsArray. Iterate through each element of GlobalColumnsArray
         for (( column=1; column <= $numberOfColumns; ++column ))
         do
@@ -694,11 +688,11 @@ function CallLister  # Generates a (potentially multi-page) list from a file.
             fi
         done
     done
-    #  Proceed to page-handling in CallSelectPage
-    CallSelectPage $winHeight $winCentre $lastPage
-} # End CallLister
+    #  Proceed to page-handling in DoSelectPage
+    DoSelectPage $winHeight $winCentre $lastPage
+} # End DoLister
 
-function CallSelectPage    # Organises a (nominated) pageful of data for display
+function DoSelectPage    # Organises a (nominated) pageful of data for display
 {       # $1 = winHeight; $2 = winCentre; $3 = lastPage
 
     local pageNumber lastPage advise previous next instructions instrLen
@@ -712,8 +706,7 @@ function CallSelectPage    # Organises a (nominated) pageful of data for display
     previous="Enter '<' for previous page"
     next="Enter '>' for next page"
 
-    # Display appropriate page according to user input
-    while :
+    while true    # Display appropriate page according to user input
     do
         case $pageNumber in
         1)  if [ $lastPage -gt 1 ]; then   # On page 1, with more than 1 page in total
@@ -722,9 +715,9 @@ function CallSelectPage    # Organises a (nominated) pageful of data for display
                 instructions=""
             fi
             GlobalCursorRow=1                       # Reset cursor to top of page
-            CallPrintPage "$winHeight" "$winCentre" "$instructions" "$pageNumber" "$lastItem"
+            DoPrintPage "$winHeight" "$winCentre" "$instructions" "$pageNumber" "$lastItem"
  
-            case $? in           # Return code from CallPrintPage will be 0, 1, or 2
+            case $? in           # Return code from DoPrintPage will be 0, 1, or 2
             1)  continue         # < (left arrow) = illegal call to previous page
             ;;
             2)  if [ $lastPage -gt 1 ]; then  # On page 1, with more than 1 page in total
@@ -737,7 +730,7 @@ function CallSelectPage    # Organises a (nominated) pageful of data for display
         ;; 
         $lastPage) instructions="$previous"
             GlobalCursorRow=1                       # Reset cursor to top of page
-            CallPrintPage "$winHeight" "$winCentre" "$instructions" "$pageNumber" "$lastItem"
+            DoPrintPage "$winHeight" "$winCentre" "$instructions" "$pageNumber" "$lastItem"
             case $? in                       # Return will be 0, 1, or 2
             1)  pageNumber=$((pageNumber-1)) # < (left arrow) = previous page
             ;;
@@ -749,7 +742,7 @@ function CallSelectPage    # Organises a (nominated) pageful of data for display
         *)  instructions="$previous - $next"
             GlobalCursorRow=1                       # Reset cursor to top of page
          
-            CallPrintPage "$winHeight" "$winCentre" "$instructions" "$pageNumber" "$lastItem"
+            DoPrintPage "$winHeight" "$winCentre" "$instructions" "$pageNumber" "$lastItem"
             case $? in                              # Return will be 0, 1, or 2
             1)  if [ $pageNumber -gt 1 ]; then      # Not on page 1
                     pageNumber=$((pageNumber-1))    # < (left arrow) = previous page
@@ -763,12 +756,12 @@ function CallSelectPage    # Organises a (nominated) pageful of data for display
             esac
         esac
     done
-} # End CallSelectPage
+} # End DoSelectPage
 
-function CallPrintPage      # Prints the page prepared and selected in CallSelectPage
+function DoPrintPage      # Prints the page prepared and selected in DoSelectPage
 {  # $1 winHeight; $2 winCentre; $3 instructions; $4 pageNumber; $5 lastItem;
-   # The arrays used here are declared and initialised in CallLister as global in scope
-   
+   # The arrays used here are declared and initialised in DoLister as global in scope
+
     local pageWidth columnStart thisPage pageNumber
     local counter columnWidth instructions instrLen lastItem advisLen
     local winHeight winCentre startPoint topRow
@@ -781,9 +774,9 @@ function CallPrintPage      # Prints the page prepared and selected in CallSelec
     lastItem="$5"
     counter=1
 
-    CallHeading $Backtitle    # Prepare window
+    DoHeading $Backtitle    # Prepare window
     
-    CallFirstItem "Page $pageNumber of $lastPage"
+    DoFirstItem "Page $pageNumber of $lastPage"
 
     thisPage="${GlobalPagesArray[${pageNumber}]}"      # String of column numbers for this page
     pageWidth=${GlobalPageWidthsArray[${pageNumber}]}  # Full width of this page
@@ -791,9 +784,8 @@ function CallPrintPage      # Prints the page prepared and selected in CallSelec
     topRow=$((GlobalCursorRow+1))
     GlobalCursorRow=$topRow
  
-    while :
+    while true  # Do the printing thing
     do
-        # counter=1
         # Outer loop iterates through columns for this page, getting the column numbers
         for column in ${thisPage} 
         do  
@@ -829,20 +821,19 @@ function CallPrintPage      # Prints the page prepared and selected in CallSelec
         tput cup $((winHeight-2)) $startPoint 
         echo "${advise}"                        # eg: "or ' ' to exit without choosing"
         GlobalCursorRow=$((winHeight-3))
-        CallForm "Enter the number of your selection: "
+        DoForm "Enter the number of your selection: "
         startPoint=$saveStartPoint
        
-        case $GlobalResponse in
-        '') GlobalResult=""
+        case $GlobalChar in
+        '') GlobalChar=""
             return 0                                    # Quit without selecting anything
         ;;
         "<") return 1                                   # Previous page, if valid
         ;;
         ">") return 2                                   # Next page, if valid
         ;;
-        *[!0-9]*)   # CallHeading
-            # CallFirstItem "Page $pageNumber of $lastPage"
-            thisPage="${GlobalPagesArray[${pageNumber}]}"      # String of column numbers for this page
+        *[!0-9]*)   # Not numbers
+            thisPage="${GlobalPagesArray[${pageNumber}]}"  # String of column numbers for this page
             pageWidth=${GlobalPageWidthsArray[${pageNumber}]}  # Full width of this page of columns
             columnStart=$(( winCentre - (pageWidth/2) -3 ))    # Centre it
             GlobalCursorRow=$topRow    
@@ -853,8 +844,8 @@ function CallPrintPage      # Prints the page prepared and selected in CallSelec
             do
                 for item in ${GlobalColumnsArray[${column}]}  # Inner loop finds this item
                 do
-                    if [ $counter -eq $GlobalResponse ]; then      
-                        GlobalResult=$item                 
+                    if [ $counter -eq $GlobalInt ]; then      
+                        GlobalChar=$item                 
                         return 0
                     fi
                     counter=$((counter+1))
@@ -862,5 +853,5 @@ function CallPrintPage      # Prints the page prepared and selected in CallSelec
             done
         esac
     done
-} # End CallPrintPage
+} # End DoPrintPage
 # } End List class

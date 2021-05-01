@@ -1,2 +1,7 @@
-Editor:geany
-Delimiter:function
+Editor:nano
+Terminal:xterm
+
+Each item has a label (eg: Editor:nano) - always follow this format
+Only edit after the colon - do not delete the label or the colon
+Add any new items below the existing ones
+Do not add any lines above the existing items
