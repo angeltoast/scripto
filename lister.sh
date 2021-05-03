@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Developed by Elizabeth Mills
-# Revision date: 25th April 2021
+# Revision 21.05.03.1 May 2021
+# Elizabeth Mills
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,46 +16,48 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 #            General Public License for more details.
 
-# Functions may return the content of a selected item via the global
-# variable GlobalChar, and the item's menu number via GlobalInt.
-# All other variables are local, and passed as parameters between functions.
+# Some of these functions share the outcome of their processes via the
+# global variables GlobalChar and GlobalInt. One other global variable
+# is used - GlobalCursorRow, which tracks vertical alignment. All other
+# variables are local to their functions, and values must be passed as
+# parameters between them.
 # See lister.manual for guidance on the use of these functions
 
 # --------------------  ------------------------
-# Class/Function  Line	Purpose
+#   Function    Line	Purpose
 # --------------------  ------------------------
-# .. Shared class ..    General-purpose functions
-# DoNotFound     54   General warning message
-# DoHeading      61   Prepare a new window with heading
-# DoForm         83   Centred prompt for user-entry
-# DoMessage     101   Prints a message with Ok button
-# DoButtons     133   Prints one or two buttons
-# .. Menu class ..      Displaying and using menus
-# DoMenu        185   Generates a simple menu of one-word items
-# DoLongMenu    340   Generates a menu of multi-word items
-# DoFirstItem   483   Prints a single, centred item
-# DoNextItem    504   Prints successive aligned items
-# DoPrintRev    510   Reverses text colour at appointed position
-# DoKeypress    525   Respond to keypress
-# .. List class ..      Display long lists and accept user input
-# DoLister      563   Generates a numbered list of one-word items in columns
-# DoSelectPage  695   Used by DoLister to manage page handling
-# DoPrintPage   761   Used by DoLister to display selected page
-# --------------------  ------------------------
+# .. Shared ..    General-purpose functions
+# DoNotFound     58   General warning message
+# DoHeading      63   Prepare a new window with heading
+# DoForm         86   Centred prompt for user-entry
+# DoMessage     104   Prints a message with Ok button
+# DoButtons     135   Prints one or two buttons
+# .. Menus ..      Displaying and using menus
+# DoMenu        187   Generates a simple menu of one-word items
+# DoLongMenu    344   Generates a menu of multi-word items
+# DoFirstItem   490   Prints a single, centred item
+# DoNextItem    511   Prints successive aligned items
+# DoPrintRev    517   Reverses text colour at appointed position
+# DoKeypress    532   Respond to keypress
+# .. Lists ..      Display long lists and accept user input
+# DoLister      570   Generates a numbered list of one-word items in columns
+# DoSelectPage  702   Used by DoLister to manage page handling
+# DoPrintPage   768   Used by DoLister to display selected page
+# DoMega        863   Pages full of extra long text, trimmed to fit
+# DoMegaPage    913   Does the printing for DoMega
+# --------------------  -----------------------------------------
 
 # Global variables
 GlobalInt=0                # Output (menu item number)
 GlobalChar=""                 # Output (menu item text)
 GlobalCursorRow=0               # For alignment across functions
-GlobalBacktitle="~ LISTER ~"
 
-# class Shared
-# }
+# ---------------------------------------------------------------
+# Shared
+#----------------------------------------------------------------
 function DoNotFound   # Errror reporting
-{   # Optional message text
-    echo "${FUNCNAME[0]} at line $LINENO in ${BASH_SOURCE[1]} called from ${FUNCNAME[1]} in  at line ${BASH_LINENO[2]}"
-    # PrintOne "$1 Please try again ..."
-    DoButtons "Ok" 1 9
+{   # $1 and $2 optional lines of message text
+    xterm -T " Error" -geometry 90x10+300+250 -fa monospace -fs 10 -e "echo '$1' && echo '$2' && read -p 'Please press [Enter] ...'"
 }
 
 function DoHeading    # Always use this function to prepare the screen
@@ -78,6 +80,7 @@ function DoHeading    # Always use this function to prepare the screen
     tput bold                                 # Display will be bold
     printf "%-s\\n" "$text"
     tput sgr0                                 # Reset colour inversion
+    GlobalCursorRow=$((GlobalCursorRow+1))
 } # End DoHeading
 
 function DoForm    # Centred prompt for user-entry
@@ -99,8 +102,7 @@ function DoForm    # Centred prompt for user-entry
 } # End DoForm
 
 function DoMessage    # Display a message with an 'Ok' button to close
-{                       # $1 = message text
-
+{                     # $1 = message text
     local winwidth text textlength textRow buttonRow startpoint
        
     if [ ! "$1" ]; then text="No message passed"; else text="$1"; fi
@@ -178,10 +180,10 @@ function DoButtons
     tput sgr0 	                                # Reset colour
     return $selected
 } # End DoButtons
-# } End class Shared
-
-# class Menu
-# {
+# End Shared
+# -------------------------------------------------------------
+# Menus
+#--------------------------------------------------------------
 function DoMenu  # Simple menu
 {       # $1 String of single-word menu items (or the name of a file)
         # $2 button text eg: 'Ok Exit'
@@ -189,7 +191,6 @@ function DoMenu  # Simple menu
         # Sets global variable GlobalInt with the number of the item selected
         # and GlobalChar with the text of the item selected
         # Also sets the system return value ($?) with the number of the item selected
-        # Read lister.manual for full details
   
     local winwidth startpoint padding itemlen maxlen counter menulist
     local name items buttontext message buttonRow item i
@@ -200,6 +201,7 @@ function DoMenu  # Simple menu
     if [ -f "$1" ]; then                    # If a file
         menulist=""
         items=$(cat ${1} | wc -l)           # Count lines in file
+        items=$((items+1))                # wc counts newlines, so add 1
         for (( i=1; i <= $items; ++i ))     # Load file contents into menulist
         do
             item="$(head -n ${i} ${1} | tail -n 1)" # Read item from file
@@ -221,11 +223,14 @@ function DoMenu  # Simple menu
     case $3 in
       "") message=""
       ;;
-      *) message="$2"
+      *) message="$3"
     esac
    
     DoHeading                             # Prepare page
-  
+    GlobalCursorRow=$((GlobalCursorRow+1))
+    DoFirstItem "$message"
+    GlobalCursorRow=$((GlobalCursorRow+1))
+    
     counter=0
     # Find length of longest item for use in reverse colour
     for i in $menulist
@@ -246,7 +251,6 @@ function DoMenu  # Simple menu
     
     # Now run through the list again to print each item
     counter=1
-    GlobalCursorRow=3
     for i in $menulist
     do
       name="$i"                       # Read item from list
@@ -343,7 +347,7 @@ function DoLongMenu    # Advanced menuing function with extended descriptions
     # $3 Optional headline (if headline is required, $2 must be passed, even if null)
     # DoLongMenu requires the named file to exist.
     # longmenu.file must contain the verbose menu items (max length 50 characters),
-    # one item to a line 
+    # one item to a line, no more than 20 items
 
     local filename winwidth message                               # Basics
     local items description longest length trimmed padding maxlen # Items
@@ -354,7 +358,7 @@ function DoLongMenu    # Advanced menuing function with extended descriptions
     if [ -f "$1" ]; then
         filename="$1"
     else
-        DoMessage "$1 not found - unable to continue"   # Display error message
+        DoNotFound "$1 not found - unable to continue"   # Display error message
         return 0
     fi
       
@@ -368,6 +372,7 @@ function DoLongMenu    # Advanced menuing function with extended descriptions
     winwidth=$(tput cols)             # Window width
     maxlen=$((winwidth -2))           # Maximum allowable item length
     items=$(cat "$filename" | wc -l)  # Count lines in file
+    items=$((items+1))                # wc counts newlines, so add 1
     longest=0
     
     # Find length of longest item in file for use in reverse colour
@@ -405,7 +410,7 @@ function DoLongMenu    # Advanced menuing function with extended descriptions
           GlobalCursorRow=$((GlobalCursorRow + 1 ))
         fi
     done
-    
+ 
     GlobalCursorRow=$((GlobalCursorRow+1))
     DoFirstItem "Use cursor keys to navigate"
     buttonrow=$((GlobalCursorRow))
@@ -528,11 +533,11 @@ function DoKeypress # Reads keyboard and returns value via GlobalInt
 {  
     local keypress
       
-    while true  # Respond to keypress
+    while true  # Respond to user keypress
     do
         tput civis &                          # Hide cursor
         read -rsn1 keypress                   # Capture key press
-        tput cnorm
+        tput cnorm                            # Reset cursor
         case "$keypress" in
         "") # Ok/Return pressed
             GlobalInt=0
@@ -558,18 +563,17 @@ function DoKeypress # Reads keyboard and returns value via GlobalInt
         esac
     done
 } # End DoKeypress
-# } End class Menu
-
-# class List
-# {
+# End Menus
+# ----------------------------------------------------------
+# Lists
+# ----------------------------------------------------------
 function DoLister  # Generates a (potentially multi-page) list from a file.
 {   # Parameter: $1 is the name of the file containing all the items to be listed
-    # The calling function must creates the file* before calling DoLister
+    # The calling function must create the file* before calling DoLister
     #       * The file must have one word per item, one item per line
 
-        local totalItems lastItem itemLen testLen
-        local winWidth displayWidth winCentre winHeight 
-        local topRow bottomRow itemsInColumn counter
+        local totalItems lastItem itemLen testLen winWidth displayWidth
+        local winCentre winHeight topRow bottomRow itemsInColumn counter
         local page pageNumber pageWidth columnWidth lastPage 
         local column numberOfColumns widthOfColumns recordNumber
 
@@ -583,7 +587,7 @@ function DoLister  # Generates a (potentially multi-page) list from a file.
 
         page=""                 # List of column numbers for the selected page
         pageNumber=1            # Page selector
-        pageWidth=4             # Start width accumulator with margins
+        pageWidth=3             # Start width accumulator with margins
         columnWidth=0
         lastPage=0
 
@@ -603,10 +607,11 @@ function DoLister  # Generates a (potentially multi-page) list from a file.
             return 0
         fi
         
-        grep -v '^$' ${1} > temp.file       # Make a clean working copy of the file
+        grep -v '^$' ${1} > lister-temp.file       # Make a clean working copy of the file
 
-        totalItems=$(cat temp.file | wc -l)
-        lastItem="$(tail -n 1 temp.file)"
+        totalItems=$(cat lister-temp.file | wc -l)
+        totalItems=$((totalItems+1))                # wc counts newlines, so add 1
+        lastItem="$(tail -n 1 lister-temp.file)"
 
         tput cnorm   # Ensure cursor is visible
 
@@ -621,71 +626,71 @@ function DoLister  # Generates a (potentially multi-page) list from a file.
         do
             testLen=0  
             Column=""  
-            # Inner loop:
-            # Get length of each item in each column (save length of longest in each column)
-            # Then add just enough to each array element to fit the window height
+            # Get length of each item in each column (save length of longest in each
+            # column) then add just enough to each element to fit the window height
             for (( line=1; line <= $itemsInColumn; ++line ))
             do  
-                recordNumber=$((recordNumber+1))  # Starts at 0, so add one for real number 
-                item=$(head -n $recordNumber temp.file | tail -1)   # Read item from file     
-                itemLen=${#item}                                    # Measure length                 
-                itemLen=$((itemLen+3))                              # Add column spacing           
+                recordNumber=$((recordNumber+1)) # Is 0 at start of outer loop  
+                item=$(head -n $recordNumber lister-temp.file | tail -1) # Read item
+                itemLen=${#item}                       # Measure length                 
+                itemLen=$((itemLen+3))                 # Add column spacing           
                 if [ $itemLen -gt $testLen ]; then
-                    testLen=$itemLen            # If longest in this column, save length         
+                    testLen=$itemLen  # If longest in this column, save length         
                 fi
            
-                if [ $recordNumber -gt $totalItems ]; then      # Exit loop if last record          
+                if [ $recordNumber -gt $totalItems ]; then # Exit loop if last          
                     break
                 else
-                    Column="$Column $item"              # Add this item to string variable
+                    Column="$Column $item"        # Add this item to string variable
                 fi
-            done # ....  End of inner (column) loop 
+            done # End of inner (column) loop 
        
             numberOfColumns=$((numberOfColumns+1))      # Increment columns counter
             # Add this column to the columns array, and its width to the widths array
             GlobalColumnsArray[${numberOfColumns}]="${Column}"
             GlobalColumnWidthsArray[${numberOfColumns}]=$testLen 
             Column=""   # Empty the string variable for the next column   
+        done # End of outer (file) loop
 
-        done        # End of outer (file) loop
-
-    rm temp.file    # Tidy up
+    rm lister-temp.file    # Tidy up
 
     # Now build GlobalPagesArray with just enough columns to fit page width each time
     while true  # These elements are numeric (column numbers). The records are still
     do       # in GlobalColumnsArray. Iterate through each element of GlobalColumnsArray
         for (( column=1; column <= $numberOfColumns; ++column ))
         do
-            if [ $((pageWidth+columnWidth+4)) -ge $displayWidth ]; then
-                # If adding another column would exceed page width, save this page's width
+            if [ $((pageWidth+columnWidth+4)) -gt $displayWidth ]; then
+                # If adding another column would exceed page width, save current width
                 GlobalPageWidthsArray[${pageNumber}]=$pageWidth
-                pageWidth=4    # and reset the variable for the next page
+                column=$((column-1))         # Reset counter so we don't lose this column
+                pageWidth=3    # and reset the variable for the next page
                 # Copy the list of columns to the pages array
                 # Note: This will not be triggered on the first iteration
                 GlobalPagesArray[${pageNumber}]="${page}"
                 # Then set next page, advance page counter
                 pageNumber=$((pageNumber+1)) 
                 page=""     # And empty the string variable for next list of columns
+                continue # Do no more on this iteration
             fi
 
-            columnWidth=0
-            for item in ${GlobalColumnsArray[${column}]}
-            do                                         # Test the length of each string
+            columnWidth=0 # Iterate through each element of GlobalColumnsArray for this
+            for item in ${GlobalColumnsArray[${column}]} # column to find the widest
+            do                                      
                 itemLen=${#item}
                 if [ $itemLen -gt $columnWidth ]; then
-                    columnWidth=$((itemLen+3))         # Reset, including spaces between columns
+                    columnWidth=$((itemLen+3)) # Reset (allow spaces between columns)
                 fi
             done
-          
-            # Check total width of columns does not exceed page width.
-            if [ $((pageWidth+columnWidth+4)) -lt $winWidth ]; then # If page is not full ...
-                pageWidth=$((pageWidth+columnWidth+4)) # Add column width to page width accumulator
-                page="$page $column"                   # and append the column number to this page
+            # Check that adding this column will not exceed page width.
+            if [ $((pageWidth+columnWidth+4)) -lt $winWidth ]; then # Page not full
+                pageWidth=$((pageWidth+columnWidth+4)) # Add column width to page width
+                page="$page $column"       # and append the column number to this page
             fi
-            if [ $column -eq $numberOfColumns ]; then  # Last column reached
-                lastPage=$pageNumber                   # Save
-                GlobalPageWidthsArray[${pageNumber}]=$pageWidth # Add to arrays
-                GlobalPagesArray[${pageNumber}]="${page}" 
+            # Update if last column reached
+            if [ $column -eq $numberOfColumns ]; then  
+                lastPage=$pageNumber                   # We now know how many pages
+                GlobalPageWidthsArray[${pageNumber}]=$pageWidth  # Add width and
+                GlobalPagesArray[${pageNumber}]="${page}"        # page to arrays
                 break 2
             fi
         done
@@ -694,24 +699,24 @@ function DoLister  # Generates a (potentially multi-page) list from a file.
     DoSelectPage $winHeight $winCentre $lastPage
 } # End DoLister
 
-function DoSelectPage    # Organises a (nominated) pageful of data for display
-{       # $1 = winHeight; $2 = winCentre; $3 = lastPage
+function DoSelectPage   # Organises a (nominated) pageful of data for display
+{                       # $1 = winHeight; $2 = winCentre; $3 = lastPage
 
     local pageNumber lastPage advise previous next instructions instrLen
     local winHeight winCentre
 
-    pageNumber=1   # Start at first page
+    pageNumber=1 
     winHeight=$1
     winCentre=$2
     lastPage=$3
     advise="or ' ' to exit without choosing" 
-    previous="Enter '<' for previous page"
-    next="Enter '>' for next page"
+    previous="Enter 'p' for previous page"
+    next="Enter 'n' for next page"
 
     while true    # Display appropriate page according to user input
     do
         case $pageNumber in
-        1)  if [ $lastPage -gt 1 ]; then   # On page 1, with more than 1 page in total
+        1)  if [ $lastPage -gt 1 ]; then   # On any page with more than 1 page in total
                 instructions="$next"
             else
                 instructions=""
@@ -722,12 +727,12 @@ function DoSelectPage    # Organises a (nominated) pageful of data for display
             case $? in           # Return code from DoPrintPage will be 0, 1, or 2
             1)  continue         # < (left arrow) = illegal call to previous page
             ;;
-            2)  if [ $lastPage -gt 1 ]; then  # On page 1, with more than 1 page in total
-                    pageNumber=$((pageNumber+1)) # > (right arrow) = next page
+            2)  if [ $lastPage -gt 1 ]; then        # More than 1 page in total
+                    pageNumber=$((pageNumber+1))    # > (right arrow) = next page
                     continue
                 fi
             ;;
-            *)  break                        # 0 : an item was selected or 'Exit' entered
+            *)  break                    # An item was selected or 'Exit' entered
             esac
         ;; 
         $lastPage) instructions="$previous"
@@ -736,9 +741,9 @@ function DoSelectPage    # Organises a (nominated) pageful of data for display
             case $? in                       # Return will be 0, 1, or 2
             1)  pageNumber=$((pageNumber-1)) # < (left arrow) = previous page
             ;;
-            2)  continue                     # > (right arrow) = illegal call to next page
+            2)  continue                 # > (right arrow) = illegal call to next page
             ;;
-            *)  break                        # 0 : an item was selected or 'Exit' entered
+            *)  break                    # 0 : an item was selected or 'Exit' entered
             esac
         ;;
         *)  instructions="$previous - $next"
@@ -754,7 +759,7 @@ function DoSelectPage    # Organises a (nominated) pageful of data for display
                     pageNumber=$((pageNumber+1))        # > (right arrow) = next page
                 fi
             ;;
-            *)  break                            # 0 : an item was selected or '' entered
+            *)  break                  # 0 : an item was selected or '' entered
             esac
         esac
     done
@@ -776,12 +781,11 @@ function DoPrintPage      # Prints the page prepared and selected in DoSelectPag
     lastItem="$5"
     counter=1
 
-    DoHeading $Backtitle    # Prepare window
-    
+    DoHeading $Backtitle                          # Prepare window
     DoFirstItem "Page $pageNumber of $lastPage"
 
-    thisPage="${GlobalPagesArray[${pageNumber}]}"      # String of column numbers for this page
-    pageWidth=${GlobalPageWidthsArray[${pageNumber}]}  # Full width of this page
+    thisPage="${GlobalPagesArray[${pageNumber}]}" # Get column numbers for this page
+    pageWidth=${GlobalPageWidthsArray[${pageNumber}]}  # Get width of this page
     columnStart=$(( winCentre - (pageWidth/2)))   
     topRow=$((GlobalCursorRow+1))
     GlobalCursorRow=$topRow
@@ -803,7 +807,7 @@ function DoPrintPage      # Prints the page prepared and selected in DoSelectPag
                 tput cup $GlobalCursorRow $columnStart   
                 printf "%-s\n" "${counter}) $item"
                 
-                if [ $item = $lastItem ]; then
+                if [ "$item" == "$lastItem" ]; then
                     break
                 fi
                 
@@ -814,7 +818,6 @@ function DoPrintPage      # Prints the page prepared and selected in DoSelectPag
             GlobalCursorRow=$topRow 
         done
 
-        saveStartPoint=SstartPoint
         startPoint=$((winCentre-(instrLen/2)))
         tput cup $((winHeight-4)) $startPoint   # Position cursor near bottom of screen
         echo "${instructions}"                  # eg: "Enter '>' for next page"
@@ -824,30 +827,30 @@ function DoPrintPage      # Prints the page prepared and selected in DoSelectPag
         echo "${advise}"                        # eg: "or ' ' to exit without choosing"
         GlobalCursorRow=$((winHeight-3))
         DoForm "Enter the number of your selection: "
-        startPoint=$saveStartPoint
-       
+        GlobalInt="$GlobalChar"
         case $GlobalChar in
-        '') GlobalChar=""
-            return 0                                    # Quit without selecting anything
+        "")  return 0                             # Quit without selecting anything
         ;;
-        "<") return 1                                   # Previous page, if valid
+        'p'|'P') return 1                         # Previous page, if valid
         ;;
-        ">") return 2                                   # Next page, if valid
+        'n'|'N') return 2                         # Next page, if valid
         ;;
         *[!0-9]*)   # Not numbers
-            thisPage="${GlobalPagesArray[${pageNumber}]}"  # String of column numbers for this page
-            pageWidth=${GlobalPageWidthsArray[${pageNumber}]}  # Full width of this page of columns
+            thisPage="${GlobalPagesArray[${pageNumber}]}"   # Get the string of column
+                                                            # numbers for this page
+            pageWidth=${GlobalPageWidthsArray[${pageNumber}]}  # Get the full width of
+                                                               # this page of columns
             columnStart=$(( winCentre - (pageWidth/2) -3 ))    # Centre it
             GlobalCursorRow=$topRow    
             continue
         ;;
-        *)  counter=1    # A number has been entered. Find it in the columns of this page
-            for column in ${thisPage}     # Outer loop iterates through the page variable
-            do
-                for item in ${GlobalColumnsArray[${column}]}  # Inner loop finds this item
+        *)  counter=1  # A number has been entered. Find it in the columns of this page
+            for column in ${thisPage}  # Outer loop iterates through the page variable
+            do                         # Inner loop finds this item
+                for item in ${GlobalColumnsArray[${column}]} 
                 do
                     if [ $counter -eq $GlobalInt ]; then      
-                        GlobalChar=$item                 
+                        GlobalChar=$item                    # And sends it home
                         return 0
                     fi
                     counter=$((counter+1))
@@ -856,4 +859,132 @@ function DoPrintPage      # Prints the page prepared and selected in DoSelectPag
         esac
     done
 } # End DoPrintPage
-# } End List class
+
+function DoMega   # Cleans up crude data from input file and prepares mega-work.file
+{   # Generates a (potentially multi-page) numbered list from a file
+    # Parameters:
+    # $1 Name of the file containing all the items; $2 information to print above list
+
+    local advise previous next instructions pages pageNumber width
+    local winHeight items i counter line display startpoint saveCursorRow term1
+
+    if [ ! -f "$1" ]; then
+        DoNotFound "The file $1 is needed but was not found."
+        return 1
+    fi
+    
+    term1="$2"
+    width=$(tput cols)
+    width=$((width-2))
+    items=$(cat $1 | wc -l)         # Count lines in file
+    items=$((items+1))              # wc counts newlines, so add 1
+    winHeight=$(tput lines)
+    display=$((winHeight-6))        # Items to display in one pageful
+    pages=$((items/display))
+    remainder=$((items%display))    # May need extra page
+    if [ $pages -eq 0 ]; then
+        pages=1
+    elif [ $remainder -gt 0 ]; then
+        pages=$((pages+1))
+    fi
+
+    rm mega-work.file 2>/dev/null  # Clear the work file (hide errors)
+
+    # 1) Read the input file, number each item, shorten to fit page width and save to a new file
+    for (( i=1; i <= items; ++i )) 
+    do
+        line="$(head -n ${i} ${1} | tail -n 1)"            # Read one line at a time
+        line="$i:$line"                                         # Number it
+        echo ${line##*( )} | cut -c 1-$width  >> mega-work.file    # Remove all leading spaces
+    done                                                        # and cut it down to fit width
+
+    if [ $items -le $display ]; then    # DoLongMenu is more convenient for a single page
+        DoLongMenu "mega-work.file" "Ok Exit" "$term1"
+        return $?
+    fi
+
+    pageNumber=1                # Start at first page
+    GlobalCursorRow=2
+    counter=1                   # For locating items in the file
+
+    DoMegaPage $pageNumber $pages $display $items $counter "$term1"   # Prints the page
+} # End DoMega
+
+function DoMegaPage     # The actual printing bit
+{                       # $1 pageNumber; $2 pages; $3 display; #4 items; $5 counter;
+                        # $6 information to be printed above the list
+
+    local advise previous next instructions pages pageNumber term1
+    local winHeight items i counter line display startpoint saveCursorRow
+
+    advise="Or ' ' to exit without choosing" 
+    previous="Enter 'p' for previous page"
+    next="'n' for next page"
+    pageNumber=$1
+    pages=$2
+    display=$3
+    items=$4
+    counter=$5
+    term1="$6"
+
+    while true      # Print the actual page
+    do
+        if [ $pageNumber -eq 1 ]; then    
+            instructions="Enter $next"
+        elif [ $pageNumber -eq $pages ]; then  
+            instructions="$previous"
+        else
+            instructions="$previous or $next"
+        fi
+
+        DoHeading           
+        GlobalCursorRow=1
+        DoFirstItem "$term1"
+        GlobalCursorRow=2
+        DoFirstItem "Page $pageNumber of $pages"
+        GlobalCursorRow=3    
+     
+        # Print a pageful up to max number of lines to display
+        for (( line=1; line <= $display; ++line ))
+        do
+            item=$(head -n $counter mega-work.file | tail -1)  # Read item from file     
+            if [ $line -eq 1 ]; then                        # First item on this page
+                tput cup $GlobalCursorRow 2                 # Move cursor to startpoint
+                printf "%-s\\v" "$item"                     # Print the item
+            else
+                DoNextItem 2 "$item"
+            fi       
+            counter=$((counter+1)) 
+            if [ $counter -gt $items ]; then                # Exit loop if last record
+                GlobalCursorRow=$((GlobalCursorRow+1)) 
+                break
+            fi
+            GlobalCursorRow=$((GlobalCursorRow+1)) 
+        done
+
+        DoFirstItem "$instructions"             
+        DoFirstItem "$advise"
+        DoForm "Enter the number of your selection : "
+
+        case "$GlobalChar" in
+        "") return 0                                   # Backing out
+        ;;
+        'p'|'P') if [ $pageNumber -ne 1 ]; then        # Ignore illegal call to previous page
+                pageNumber=$((pageNumber-1))
+            fi
+         ;;
+        'n'|'N') if [ $pageNumber -ne $pages ]; then   # Ignore illegal call to next page
+                pageNumber=$((pageNumber+1))
+            fi
+        ;;
+        *[!0-9]*) continue                      # Other characters that are not numbers
+        ;;
+        *)  # A number was entered
+            counter="$GlobalChar"   # Convert char to int and use to find the item in the file
+            GlobalChar="$(head -n ${counter} mega-work.file | tail -n 1)"
+            return 0
+        esac
+        counter=$(((pageNumber*display)+1-display))
+    done
+} # End DoMegaPage
+# End Lists
