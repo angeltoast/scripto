@@ -1,7 +1,7 @@
 Scripto is a programmer's utility for searching for text in a working directory.
 
-Designed for use with bash shell scripts, Scripto will work with any plain text files in a
-Linux environment.
+Although originally designed for use with bash shell scripts, Scripto will work with any
+plain text files in a Linux environment.
 
 Is your source file huge, or is your code spread over several files? Scripto may help.
 1) You enter text to find, and Scripto searches for it in all files in the current directory;
@@ -14,20 +14,20 @@ listed in line-number order, so you can see how they relate. Do the same for var
 where you may have assigned the same variable name more than once, or where its value has been
 changed. Used a complex regex and can only remember a bit of it? See if Scripto can find it.
 
-The ideal situation for Scripto would be in your workshop directory.
-Note that Scripto sources the Lister library of simple interfaces for use in a predominantly
-text-based environment, so make sure that a copy of lister.sh is also present.
-A copy of Lister is distributed with Scripto for your convenience.
+The ideal situation for Scripto would be in your workshop directory - you have one, right?
+
+Note that Scripto sources the Lister library of simple interfaces, written for use in a
+text-based environment, so make sure that a copy of lister.sh is also present in your
+working directory. A copy of Lister is distributed with Scripto for your convenience.
 
 Scripto is kept as basic as possible - you're a programmer, you know what to do.
 
 Note that not all editors support the line-finding facility:
 ... Geany, Nano, Gedit, Vi and Vim are among those that do;
-... CodeBlocks, NetBeans and Bluefish are among those that don't.
+... CodeBlocks, NetBeans and Bluefish are among those that don't (Scripto will still
+display the lines of text, but the editor won't open at the selected line).
 --------------------------------------------------------------------
-The program described herein is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-A copy of the GNU General Public License is available from:
+The program described herein is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details. A copy of the GNU General Public License is available from:
 The Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 --------------------------------------------------------------------
 Scripto is free software; you can redistribute it and/or modify it under the terms of the

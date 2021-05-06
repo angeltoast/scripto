@@ -30,8 +30,8 @@ function ScriptoMain
 {
     local editor terminal term ignore
 
-    editor="$(head -n 1 .scriptosettings | tail -n 1 | cut -d':' -f2)"  
-    terminal="$(head -n 2 .scriptosettings | tail -n 1 | cut -d':' -f2)"  
+    editor="$(head -n 1 scriptosettings | tail -n 1 | cut -d':' -f2)"  
+    terminal="$(head -n 2 scriptosettings | tail -n 1 | cut -d':' -f2)"  
     
     while true
     do
@@ -69,9 +69,9 @@ function ScriptoMenu
     1)  DoHeading
         ScriptoFind
     ;;
-    2)  $editor .scriptosettings
-        editor="$(head -n 1 .scriptosettings | tail -n 1 | cut -d':' -f2)"  
-        terminal="$(head -n 2 .scriptosettings | tail -n 1 | cut -d':' -f2)"  
+    2)  $editor scriptosettings         # Then reload in current session ...
+        editor="$(head -n 1 scriptosettings | tail -n 1 | cut -d':' -f2)"  
+        terminal="$(head -n 2 scriptosettings | tail -n 1 | cut -d':' -f2)"  
         ScriptoMenu
     ;;
     *)  exit
