@@ -6,7 +6,7 @@
 # 2) Scripto then displays all occurences of that text with file names and line numbers;
 # 3) You can then select an instance and open the file at that line using your chosen text editor.
 
-# Revision 21.05.03.1
+# Revision 210507.1
 # Elizabeth Mills May 2021
 #
 # This program is free software; you can redistribute it and/or modify it under the terms of the
@@ -28,16 +28,24 @@ GlobalCursorRow=0
 
 function ScriptoMain
 {
-    local editor terminal term ignore
+    local editor terminal exclude term ignore
 
-    editor="$(head -n 1 scriptosettings | tail -n 1 | cut -d':' -f2)"  
-    terminal="$(head -n 2 scriptosettings | tail -n 1 | cut -d':' -f2)"  
+    editor="$(head -n 1 scripto.settings | tail -n 1 | cut -d':' -f2)"  
+    terminal="$(head -n 2 scripto.settings | tail -n 1 | cut -d':' -f2)"
     
     while true
     do
+        Tidy                    # Clean up work area on arrival
         ScriptoInfo
         ScriptoFind
+        Tidy                    # Clean up work area before leaving
     done  
+}
+
+function Tidy
+{
+    rm scripto-temp.file 2>/dev/null        # Clear the temp file (hide errors)
+    rrm scripto-exclude.file 2>/dev/null    # Clear the temp file (hide errors)
 }
 
 function ScriptoInfo    # ScriptoPrepares page and prints helpful comments
@@ -64,17 +72,20 @@ function ScriptoInfo    # ScriptoPrepares page and prints helpful comments
 
 function ScriptoMenu
 {
-    DoMenu "Find Settings"
+    DoMenu "Find Settings" "" "Search, change settings, or quit"
     case $GlobalInt in
     1)  DoHeading
         ScriptoFind
+        Tidy
     ;;
-    2)  $editor scriptosettings         # Then reload in current session ...
-        editor="$(head -n 1 scriptosettings | tail -n 1 | cut -d':' -f2)"  
-        terminal="$(head -n 2 scriptosettings | tail -n 1 | cut -d':' -f2)"  
+    2)  $editor scripto.settings         # Then reload in current session ...
+        editor="$(head -n 1 scripto.settings | tail -n 1 | cut -d':' -f2)"  
+        terminal="$(head -n 2 scripto.settings | tail -n 1 | cut -d':' -f2)"
+        exclude="$(head -n 3 scripto.settings | tail -n 1 | cut -d':' -f2)"
         ScriptoMenu
     ;;
-    *)  exit
+    *)  Tidy
+        exit
     esac
 }
 
@@ -98,10 +109,11 @@ function ScriptoFind
         
         GlobalCursorRow=$((GlobalCursorRow+2))
         DoForm "Ignore case? y/N : "
-        ignore="${GlobalChar,,}"            # Ensure lower case for y/n option
+        ignore="${GlobalChar,,}"        # Ensure lower case for y/n option
 
-        rm scripto-temp.file 2>/dev/null    # Clear the temp file (hide errors)
+        Tidy                            # Clean up work area
         ScriptoPrep "$term" "$ignore"   # Prepare data for DoMega to use for page handling
+        Tidy                            # And clean again on return
     done
 }
 
@@ -113,23 +125,36 @@ function ScriptoPrep    # ScriptoPrepare search data
         term="$1"
         width=$(tput cols)
         width=$((width-2))
-    
-        # scripto-temp.file is prepared with crude data for DoMega
+        Tidy                                # Clean up work area before starting
+        # Prepare scripto-exclude.file
+        exclude="$(head -n 3 scripto.settings | tail -n 1 | cut -d':' -f2)"
+        for item in $exclude
+        do
+            echo $item >> scripto-exclude.file
+        done
+
+        # Prepare scripto-temp.file with crude data for DoMega
         if [ "$2" == "y" ]; then 
-            grep -ins "$term" * >> scripto-temp.file    # Find all instances ignoring case
+            grep -ins "$term" * | grep -v -f scripto-exclude.file >> scripto-temp.file    # Find all instances ignoring case
         else
-            grep -ns "$term" * >> scripto-temp.file     # Find all instances observing case
+            grep -ns "$term" * | grep -v -f scripto-exclude.file >> scripto-temp.file     # Find all instances observing case
         fi
-                
+
         # Now display the results, and user can select an item
         DoMega "scripto-temp.file" "Items found matching : '$term'" # DoMega will handle diplay and user input
-        rm scripto-output.file 2>/dev/null              # The work file - must be rebuilt
-        if [ "$GlobalChar" == "" ]; then        # User is backing out
+        Tidy                                # Clean up work area upon return
+        if [ "$GlobalChar" == "" ]; then                # User is backing out
             return
-        else                                    # Prepare for editing
+        else                                            # Prepare for editing
             filename="$(echo $GlobalChar | head -n 1 | tail -n 1 | cut -d':' -f2)"    # -f1 is record number
             linenumber="$(echo $GlobalChar | head -n 1 | tail -n 1 | cut -d':' -f3)"
-            $editor "$filename" "+$linenumber"   # Open the file in editor at chosen line
+            case ${editor,,} in
+            'kate') kate "-l$linenumber" "$filename"
+            ;;
+            'netbeans') netbeans "${filename}:$linenumber"
+            ;;
+            *)  $editor "+$linenumber" "$filename"         # Open the file in editor at chosen line
+            esac
         fi
     done
 }
