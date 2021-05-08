@@ -1,22 +1,23 @@
 # Scripto
 
-**Scripto** is a programmer's utility for finding text buried in a large file or across several files.
+**Scripto** is a programmer's utility for finding recurrences of text buried in a large file or across several files.
+
+You might need to find all calls to a particular function - just enter the function name, and **Scripto**
+will list every line in every file where that name appears, including where it is declared. Items in the list are grouped by file name, and displayed in line-number order, so you can see how they relate.
+
+You can do the same for variables. See where you may have assigned the same variable name more than once, or where its value has been changed.
+
+Used a complex regex and can only remember a bit of it? See if **Scripto** can find it.
 
 <u>Application</u>
 
-Although originally designed for use with bash shell scripts, **Scripto** will work with any plain text files in a Linux environment. The ideal situation for **Scripto** would be in your workshop directory.
+Although originally designed for use with bash shell scripts, **Scripto** will work with any plain text files for any programming language in a Linux environment. The ideal situation for **Scripto** would be in your workshop directory.
 
 Is your source file huge, or is your code spread over several files? **Scripto** may help.
 
  1. You enter text to find, and **Scripto** searches for it in all files in the current directory;
  2. **Scripto** then displays all occurences, with file names and line numbers;
  3. You can then select one and your chosen text editor will open the file at that line.
-
-You might want to find all calls to a particular function. Enter the function name, and **Scripto**
-will list every line in every file where that name appears. They are grouped by file name, and
-listed in line-number order, so you can see how they relate. Do the same for variables. See
-where you may have assigned the same variable name more than once, or where its value has been
-changed. Used a complex regex and can only remember a bit of it? See if **Scripto** can find it.
 
 Note that **Scripto** sources the **Lister** library of simple interfaces, written for use in a
 text-based environment, so make sure that a copy of lister.sh is also present in your

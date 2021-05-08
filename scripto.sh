@@ -6,8 +6,8 @@
 # 2) Scripto then displays all occurences of that text with file names and line numbers;
 # 3) You can then select an instance and open the file at that line using your chosen text editor.
 
-# Revision 210507.1
-# Elizabeth Mills May 2021
+# Revision 210508.1
+# Elizabeth Mills
 #
 # This program is free software; you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation; either version 2 of
@@ -45,7 +45,7 @@ function ScriptoMain
 function Tidy
 {
     rm scripto-temp.file 2>/dev/null        # Clear the temp file (hide errors)
-    rrm scripto-exclude.file 2>/dev/null    # Clear the temp file (hide errors)
+    rm scripto-exclude.file 2>/dev/null    # Clear the temp file (hide errors)
 }
 
 function ScriptoInfo    # ScriptoPrepares page and prints helpful comments
