@@ -6,7 +6,7 @@
 # 2) Scripto then displays all occurences of that text with file names and line numbers;
 # 3) You can then select an instance and open the file at that line using your chosen text editor.
 
-# Revision 210508.1
+# Revision 210510
 # Elizabeth Mills
 #
 # This program is free software; you can redistribute it and/or modify it under the terms of the
@@ -36,7 +36,7 @@ function ScriptoMain
     while true
     do
         Tidy                    # Clean up work area on arrival
-        ScriptoInfo
+        DoHeading
         ScriptoFind
         Tidy                    # Clean up work area before leaving
     done  
@@ -52,7 +52,6 @@ function ScriptoInfo    # ScriptoPrepares page and prints helpful comments
 {                       # $1 String of integers
     local item items
     items=$(echo $1 | wc -l)     # Count lines in $1
-    
     for item in $1
     do
         case $item in
@@ -64,7 +63,7 @@ function ScriptoInfo    # ScriptoPrepares page and prints helpful comments
         ;;
         4) DoFirstItem "Enter any text to search, or leave empty and [Enter] for a menu."
         ;;
-        *) DoFirstItem "Scripto is a programmer's utility for finding functions, variables, etc"
+        *) DoFirstItem "Unexpected item in the bagging area!"
         esac
         GlobalCursorRow=$((GlobalCursorRow+1))
     done
@@ -119,10 +118,12 @@ function ScriptoFind
 
 function ScriptoPrep    # ScriptoPrepare search data
 {                       # $1 search text; $2 ignore case (y/n)
+    local term items i line filename linenumber width ignore
+    term="$1"
+    ignore="$2"
+    
     while true
     do  
-        local term items i line filename linenumber width
-        term="$1"
         width=$(tput cols)
         width=$((width-2))
         Tidy                                # Clean up work area before starting
@@ -134,10 +135,16 @@ function ScriptoPrep    # ScriptoPrepare search data
         done
 
         # Prepare scripto-temp.file with crude data for DoMega
-        if [ "$2" == "y" ]; then 
+        if [ "$ignore" == "y" ]; then 
             grep -ins "$term" * | grep -v -f scripto-exclude.file >> scripto-temp.file    # Find all instances ignoring case
         else
             grep -ns "$term" * | grep -v -f scripto-exclude.file >> scripto-temp.file     # Find all instances observing case
+        fi
+
+        items=$(cat scripto-temp.file | wc -l)         # Count lines in file
+        if [ $items -eq 0 ]; then
+            DoMessage "No matches found for '$term'"
+            return
         fi
 
         # Now display the results, and user can select an item
