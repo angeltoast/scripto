@@ -6,7 +6,7 @@
 # 2) Scripto then displays all occurences of that text with file names and line numbers;
 # 3) You can then select an instance and open the file at that line using your chosen text editor.
 
-# Revision 210510
+# Revision 210520
 # Elizabeth Mills
 #
 # This program is free software; you can redistribute it and/or modify it under the terms of the
@@ -20,11 +20,11 @@
 # A copy of the GNU General Public License is available from:
 # the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-source lister.sh    # User interfaces
+source lister.sh      # The Lister libraray of user interface functions
 
-GlobalInt=0
-GlobalChar=""
-GlobalCursorRow=0 
+GlobalInt=0           # For returning integers from functions
+GlobalChar=""         # For returning strings from functions
+GlobalCursorRow=0     # Manages the cursor position between functions
 
 function ScriptoMain
 {
@@ -36,7 +36,7 @@ function ScriptoMain
     while true
     do
         Tidy                    # Clean up work area on arrival
-        DoHeading
+        DoHeading               # Lister function to prepare page
         ScriptoFind
         Tidy                    # Clean up work area before leaving
     done  
@@ -44,11 +44,11 @@ function ScriptoMain
 
 function Tidy
 {
-    rm scripto-temp.file 2>/dev/null        # Clear the temp file (hide errors)
-    rm scripto-exclude.file 2>/dev/null    # Clear the temp file (hide errors)
+    rm scripto-temp.file 2>/dev/null       # Clear temporary files
+    rm scripto-exclude.file 2>/dev/null  
 }
 
-function ScriptoInfo    # ScriptoPrepares page and prints helpful comments
+function ScriptoInfo    # Prepares page and prints helpful comments
 {                       # $1 String of integers
     local item items
     items=$(echo $1 | wc -l)     # Count lines in $1
@@ -56,7 +56,7 @@ function ScriptoInfo    # ScriptoPrepares page and prints helpful comments
     do
         case $item in
         1) DoFirstItem "Scripto will search all files in the current directory for text matching"
-        ;;
+        ;;    # Lister function to print one line
         2) DoFirstItem "your criteria, and will list each line onscreen for you to choose one."
         ;;
         3) DoFirstItem "The selected item will then be opened in your nominated editor."
@@ -88,11 +88,11 @@ function ScriptoMenu
     esac
 }
 
-function ScriptoFind
+function ScriptoFind   # Accepts user input of search rewuirement
 {
     local term ignore
     
-    while true      # Get user input
+    while true    # Get user input then call functions to display results
     do
         DoHeading
         GlobalCursorRow=4
@@ -116,7 +116,7 @@ function ScriptoFind
     done
 }
 
-function ScriptoPrep    # ScriptoPrepare search data
+function ScriptoPrep    # Prepare search data in a file
 {                       # $1 search text; $2 ignore case (y/n)
     local term items i line filename linenumber width ignore
     term="$1"
