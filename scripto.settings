@@ -1,9 +1,3 @@
 Editor:nano
-Terminal:xterm
+Include:.sh
 Exclude:README READ-ME
-
-Each item follows the format 'Label:value' (eg: Editor:nano)
-Only edit after the colon - do not delete the label or the colon
-To exclude any text from the searches, add after the 'Exclude:' label
-Do not add any lines above or between the existing items (they must be 1 to 3)
-See 'Settings' in the README file for more information

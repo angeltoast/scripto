@@ -6,7 +6,7 @@
 # 2) Scripto then displays all occurences of that text with file names and line numbers;
 # 3) You can then select an instance and open the file at that line using your chosen text editor.
 
-# Revision 210520
+# Revised 2021/08/25
 # Elizabeth Mills
 #
 # This program is free software; you can redistribute it and/or modify it under the terms of the
@@ -20,32 +20,33 @@
 # A copy of the GNU General Public License is available from:
 # the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-source lister.sh      # The Lister libraray of user interface functions
+source lister.sh     # The Lister libraray of user interface functions
 
-GlobalInt=0           # For returning integers from functions
-GlobalChar=""         # For returning strings from functions
-GlobalCursorRow=0     # Manages the cursor position between functions
+Gnumber=0            # For returning integers from functions
+Gstring=""           # For returning strings from functions
+Grow=0               # Manages the cursor vertical position between functions
+Gcol=0               # Manages the cursor horizontal position between functions
 
-function ScriptoMain
+function Main
 {
-    local editor terminal exclude term ignore
+    local editor include exclude term ignore
 
-    editor="$(head -n 1 scripto.settings | tail -n 1 | cut -d':' -f2)"  
-    terminal="$(head -n 2 scripto.settings | tail -n 1 | cut -d':' -f2)"
-    
+    editor="$(head -n 1 scripto.settings | tail -n 1 | cut -d':' -f2)"
+    include="$(head -n 2 scripto.settings | tail -n 1 | cut -d':' -f2)"
+
     while true
     do
         Tidy                    # Clean up work area on arrival
         DoHeading               # Lister function to prepare page
         ScriptoFind
         Tidy                    # Clean up work area before leaving
-    done  
+    done
 }
 
 function Tidy
 {
     rm scripto-temp.file 2>/dev/null       # Clear temporary files
-    rm scripto-exclude.file 2>/dev/null  
+    rm scripto-exclude.file 2>/dev/null
 }
 
 function ScriptoInfo    # Prepares page and prints helpful comments
@@ -65,21 +66,22 @@ function ScriptoInfo    # Prepares page and prints helpful comments
         ;;
         *) DoFirstItem "Unexpected item in the bagging area!"
         esac
-        GlobalCursorRow=$((GlobalCursorRow+1))
+        Grow=$((Grow+1))
     done
 }
 
 function ScriptoMenu
 {
     DoMenu "Find Settings" "" "Search, change settings, or quit"
-    case $GlobalInt in
+    case $Gnumber in
     1)  DoHeading
         ScriptoFind
         Tidy
     ;;
-    2)  $editor scripto.settings         # Then reload in current session ...
-        editor="$(head -n 1 scripto.settings | tail -n 1 | cut -d':' -f2)"  
-        terminal="$(head -n 2 scripto.settings | tail -n 1 | cut -d':' -f2)"
+    2)  $editor scripto.settings    # Open the file in editor
+        # After editor is closed, reload the new settings in current session ...
+        editor="$(head -n 1 scripto.settings | tail -n 1 | cut -d':' -f2)"
+        include="$(head -n 2 scripto.settings | tail -n 1 | cut -d':' -f2)"
         exclude="$(head -n 3 scripto.settings | tail -n 1 | cut -d':' -f2)"
         ScriptoMenu
     ;;
@@ -91,24 +93,24 @@ function ScriptoMenu
 function ScriptoFind   # Accepts user input of search rewuirement
 {
     local term ignore
-    
+
     while true    # Get user input then call functions to display results
     do
         DoHeading
-        GlobalCursorRow=4
+        Grow=4
         ScriptoInfo "4"
-        GlobalCursorRow=9
+        Grow=9
         ScriptoInfo "1 2 3"
 
-        GlobalCursorRow=5
+        Grow=5
         DoForm "Enter the text to search for: "
-        
-        if [ "$GlobalChar" == "" ]; then ScriptoMenu; fi
-        term="$GlobalChar"
-        
-        GlobalCursorRow=$((GlobalCursorRow+2))
+
+        if [ "$Gstring" == "" ]; then ScriptoMenu; fi
+        term="$Gstring"
+
+        Grow=$((Grow+2))
         DoForm "Ignore case? y/N : "
-        ignore="${GlobalChar,,}"        # Ensure lower case for y/n option
+        ignore="${Gstring,,}"        # Ensure lower case for y/n option
 
         Tidy                            # Clean up work area
         ScriptoPrep "$term" "$ignore"   # Prepare data for DoMega to use for page handling
@@ -121,9 +123,9 @@ function ScriptoPrep    # Prepare search data in a file
     local term items i line filename linenumber width ignore
     term="$1"
     ignore="$2"
-    
+
     while true
-    do  
+    do
         width=$(tput cols)
         width=$((width-2))
         Tidy                                # Clean up work area before starting
@@ -135,7 +137,7 @@ function ScriptoPrep    # Prepare search data in a file
         done
 
         # Prepare scripto-temp.file with crude data for DoMega
-        if [ "$ignore" == "y" ]; then 
+        if [ "$ignore" == "y" ]; then
             grep -ins "$term" * | grep -v -f scripto-exclude.file >> scripto-temp.file    # Find all instances ignoring case
         else
             grep -ns "$term" * | grep -v -f scripto-exclude.file >> scripto-temp.file     # Find all instances observing case
@@ -148,13 +150,14 @@ function ScriptoPrep    # Prepare search data in a file
         fi
 
         # Now display the results, and user can select an item
-        DoMega "scripto-temp.file" "Items found matching : '$term'" # DoMega will handle diplay and user input
+        DoMega "scripto-temp.file" "Items found matching : '$term'"
+        # DoMega will handle diplay and user input
         Tidy                                # Clean up work area upon return
-        if [ "$GlobalChar" == "" ]; then                # User is backing out
+        if [ "$Gstring" == "" ]; then                # User is backing out
             return
         else                                            # Prepare for editing
-            filename="$(echo $GlobalChar | head -n 1 | tail -n 1 | cut -d':' -f2)"    # -f1 is record number
-            linenumber="$(echo $GlobalChar | head -n 1 | tail -n 1 | cut -d':' -f3)"
+            filename="$(echo $Gstring | head -n 1 | tail -n 1 | cut -d':' -f2)"    # -f1 is record number
+            linenumber="$(echo $Gstring | head -n 1 | tail -n 1 | cut -d':' -f3)"
             case ${editor,,} in
             'kate') kate "-l$linenumber" "$filename"
             ;;
@@ -167,4 +170,4 @@ function ScriptoPrep    # Prepare search data in a file
 }
 
 Backtitle=" ~ Scripto - A Programmers' Utility ~ "
-ScriptoMain
+Main

@@ -21,7 +21,7 @@ Is your source file huge, or is your code spread over several files? **Scripto**
 
 Note that **Scripto** sources the **Lister** library of simple interfaces, written for use in a
 text-based environment, so make sure that a copy of lister.sh is also present in your
-working directory. A copy of **Lister** is distributed with Scripto for your convenience.
+working directory. A copy of **Lister** is distributed with Scripto for your convenience. The current version of lister.sh was advanced to 2.00 on 2021/08/25, and Scripto now ships with this version. It should not affect the use or appearance of Scripto. If to detect any adverse effects, please let me know.
 
 **Scripto** is kept as basic as possible - you're a programmer, you know what to do.
 
