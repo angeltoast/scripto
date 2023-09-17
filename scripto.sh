@@ -6,9 +6,10 @@
 # 2) Scripto then displays all occurences of that text with file names and line numbers;
 # 3) You can then select an instance and open the file at that line using your chosen text editor.
 
-# Revised 2021/08/25
-# Elizabeth Mills
-#
+########################################################################
+#   Scripto - Developed by Elizabeth Mills - Version 1.00a 2023/09/17  #
+########################################################################
+
 # This program is free software; you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation; either version 2 of
 # the License, or (at your option) any later version.
@@ -20,8 +21,9 @@
 # A copy of the GNU General Public License is available from:
 # the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-source lister.sh     # The Lister libraray of user interface functions
+source lister.sh     # The Lister library of user interface functions
 
+# Global variables
 Gnumber=0            # For returning integers from functions
 Gstring=""           # For returning strings from functions
 Grow=0               # Manages the cursor vertical position between functions
@@ -90,7 +92,7 @@ function ScriptoMenu
     esac
 }
 
-function ScriptoFind   # Accepts user input of search rewuirement
+function ScriptoFind   # Accepts user input of search requirement
 {
     local term ignore
 
@@ -151,11 +153,11 @@ function ScriptoPrep    # Prepare search data in a file
 
         # Now display the results, and user can select an item
         DoMega "scripto-temp.file" "Items found matching : '$term'"
-        # DoMega will handle diplay and user input
+                                            # DoMega will handle diplay and user input
         Tidy                                # Clean up work area upon return
-        if [ "$Gstring" == "" ]; then                # User is backing out
+        if [ "$Gstring" == "" ]; then       # User is backing out
             return
-        else                                            # Prepare for editing
+        else                                # Prepare for editing
             filename="$(echo $Gstring | head -n 1 | tail -n 1 | cut -d':' -f2)"    # -f1 is record number
             linenumber="$(echo $Gstring | head -n 1 | tail -n 1 | cut -d':' -f3)"
             case ${editor,,} in
@@ -163,7 +165,7 @@ function ScriptoPrep    # Prepare search data in a file
             ;;
             'netbeans') netbeans "${filename}:$linenumber"
             ;;
-            *)  $editor "+$linenumber" "$filename"         # Open the file in editor at chosen line
+            *)  $editor "+$linenumber" "$filename"  # Open the file in editor at chosen line
             esac
         fi
     done
